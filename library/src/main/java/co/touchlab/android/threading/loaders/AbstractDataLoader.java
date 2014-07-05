@@ -93,7 +93,21 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
     @Override
     public D loadInBackground()
     {
-        D localData = findContent();
+        D localData = null;
+        try
+        {
+            localData = findContent();
+        }
+        catch (Exception e)
+        {
+            if(!handleError(e))
+            {
+                if(e instanceof RuntimeException)
+                    throw (RuntimeException)e;
+
+                throw new RuntimeException(e);
+            }
+        }
 
         if (localData != null)
         {
@@ -103,8 +117,8 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
         return localData;
     }
 
-    protected abstract D findContent();
-
+    protected abstract D findContent()throws Exception;
+    protected abstract boolean handleError(Exception e);
     protected abstract void registerContentChangedObserver();
     protected abstract void unregisterContentChangedObserver();
 

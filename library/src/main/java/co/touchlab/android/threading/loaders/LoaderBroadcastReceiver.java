@@ -3,7 +3,6 @@ package co.touchlab.android.threading.loaders;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
 
 /**
  * Created by kgalligan on 7/4/14.
