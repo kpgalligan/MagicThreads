@@ -1,0 +1,9 @@
+*.iws
+.DS_Store
+out
+target
+example/gen
+.idea
+*.iml
+library/build.sh
+atlassian-ide-plugin.xml

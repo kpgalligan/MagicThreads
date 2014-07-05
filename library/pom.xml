@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>co.touchlab</groupId>
+    <artifactId>magicthreads</artifactId>
+    <version>0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>Magic Threads</name>
+    <url>http://touchlab.co/</url>
+    <description>Android threads</description>
+
+    <build>
+        <finalName>magicthreads</finalName>
+        <resources>
+            <resource>
+                <directory>library/src/main/resources</directory>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>library/src/test/resources</directory>
+            </testResource>
+        </testResources>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.1</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.1.2</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>jar</goal>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--<plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.3.1</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Application-Version>${appVersion}</Application-Version>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>-->
+        </plugins>
+    </build>
+    <properties>
+        <!--
+              default empty string that can be overridden on command line. due to surefire's parser bug, if we don't have this here
+              and have any other characters where this is used, it'll get replaced with string "null"
+          -->
+        <surefire.argLine/>
+
+        <android-version>2.3.3</android-version>
+        <!-- external test package versions -->
+        <easymock-version>2.3</easymock-version>
+        <junit-version>4.8.1</junit-version>
+        <log4j-version>1.2.15</log4j-version>
+
+    </properties>
+    <dependencies>
+        <!-- =================================================================== -->
+        <!-- main dependencies -->
+        <dependency>
+            <groupId>com.google.android</groupId>
+            <artifactId>android</artifactId>
+            <scope>provided</scope>
+            <version>${android-version}</version>
+            <optional>true</optional>
+        </dependency>
+        <!-- =================================================================== -->
+        <!-- test dependencies -->
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit-version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+            <version>3.1</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>code.google.com</groupId>
+            <artifactId>basic-http-client</artifactId>
+            <version>0.87.1</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.mcxiaoke.volley</groupId>
+            <artifactId>library</artifactId>
+            <version>1.0.3</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>de.greenrobot</groupId>
+            <artifactId>eventbus</artifactId>
+            <version>2.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.android</groupId>
+            <artifactId>support-v4</artifactId>
+            <version>r7</version>
+        </dependency>
+
+    </dependencies>
+</project>
