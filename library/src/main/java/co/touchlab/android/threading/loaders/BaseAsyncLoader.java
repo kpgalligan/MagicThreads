@@ -26,17 +26,7 @@ public abstract class BaseAsyncLoader<D> extends AsyncTaskLoader<D>
             deliverResult(data);
         }
 
-        String[] broadcastStrings = getBroadcastStrings();
-        if (loaderBroadcastReceiver == null && broadcastStrings.length > 0)
-        {
-            loaderBroadcastReceiver = new LoaderBroadcastReceiver(this);
-            IntentFilter filter = new IntentFilter();
-            for (String s : broadcastStrings)
-            {
-                filter.addAction(s);
-            }
-            LocalBroadcastManager.getInstance(getContext()).registerReceiver(loaderBroadcastReceiver, filter);
-        }
+        registerBroadcastReceiver();
 
         if (takeContentChanged() || data == null)
         {
@@ -88,6 +78,26 @@ public abstract class BaseAsyncLoader<D> extends AsyncTaskLoader<D>
             data = null;
         }
 
+        unregisterBroadcastReceiver();
+    }
+
+    private void registerBroadcastReceiver()
+    {
+        String[] broadcastStrings = getBroadcastStrings();
+        if (loaderBroadcastReceiver == null && broadcastStrings.length > 0)
+        {
+            loaderBroadcastReceiver = new LoaderBroadcastReceiver(this);
+            IntentFilter filter = new IntentFilter();
+            for (String s : broadcastStrings)
+            {
+                filter.addAction(s);
+            }
+            LocalBroadcastManager.getInstance(getContext()).registerReceiver(loaderBroadcastReceiver, filter);
+        }
+    }
+
+    private void unregisterBroadcastReceiver()
+    {
         if (loaderBroadcastReceiver != null)
         {
             LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(loaderBroadcastReceiver);
