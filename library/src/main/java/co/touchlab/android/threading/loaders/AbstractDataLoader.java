@@ -1,21 +1,19 @@
 package co.touchlab.android.threading.loaders;
 
 import android.content.Context;
-import android.net.Uri;
 import android.support.v4.content.AsyncTaskLoader;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
-import java.util.Arrays;
 
 /**
  * Created by kgalligan on 7/4/14.
  */
-public abstract class BaseTestLoader<D> extends AsyncTaskLoader<D>
+public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
 {
     private D data;
 
-    public BaseTestLoader(Context context)
+    public AbstractDataLoader(Context context)
     {
         super(context);
     }

@@ -10,31 +10,21 @@ import android.os.Handler;
  */
 public class LoaderBroadcastReceiver extends BroadcastReceiver
 {
-    private final Handler handler;
-    private final LoaderBroadcastReceiver.ContentChangedRunnable contentChangedRunnable;
-    private BaseAsyncLoader loader;
+    private AbstractLocalBroadcastReceiverLoader loader;
 
-    public LoaderBroadcastReceiver(BaseAsyncLoader loader)
+    public LoaderBroadcastReceiver(AbstractLocalBroadcastReceiverLoader loader)
     {
-        handler = new Handler();
-        contentChangedRunnable = new ContentChangedRunnable();
         this.loader = loader;
     }
 
-    class ContentChangedRunnable implements Runnable
+    public AbstractLocalBroadcastReceiverLoader getLoader()
     {
-        @Override
-        public void run()
-        {
-            loader.onContentChanged();
-        }
+        return loader;
     }
-
 
     @Override
     public void onReceive(Context context, Intent intent)
     {
-        handler.removeCallbacks(contentChangedRunnable);
-        handler.postDelayed(contentChangedRunnable, 300);
+        getLoader().onContentChanged();
     }
 }
