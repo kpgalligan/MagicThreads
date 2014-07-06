@@ -5,17 +5,7 @@ package co.touchlab.android.threading.tasks;
  */
 public abstract class BsyncTask implements TaskQueue.Task
 {
-    private int taskId;
-
-    public void setTaskId(int taskId)
-    {
-        this.taskId = taskId;
-    }
-
-    public int getTaskId()
-    {
-        return taskId;
-    }
+    protected int contextId;
 
     protected abstract void doInBackground()throws Exception;
 
