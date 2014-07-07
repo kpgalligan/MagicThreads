@@ -4,6 +4,9 @@ import android.content.Context;
 import de.greenrobot.event.EventBus;
 
 /**
+ * Loader using the EventBus for refresh triggers.  You'll need to implement onEvent methods
+ * to actually capture events, and tell the loader to refresh.
+ *
  * Created by kgalligan on 7/5/14.
  */
 public abstract class AbstractEventBusLoader<D> extends AbstractDataLoader<D>

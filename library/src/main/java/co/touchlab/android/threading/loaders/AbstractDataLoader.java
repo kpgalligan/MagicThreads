@@ -7,6 +7,8 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 
 /**
+ * Base loader to support non-ContentProvider loaders.
+ *
  * Created by kgalligan on 7/4/14.
  */
 public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>

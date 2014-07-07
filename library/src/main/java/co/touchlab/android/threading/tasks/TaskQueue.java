@@ -10,6 +10,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
+ * Relatively simple queue implementation.  Supports removing tasks by type.  Simple method of
+ * preventing odd results when old messages are put on the queue.
+ *
  * Created by kgalligan on 7/5/14.
  */
 public class TaskQueue
@@ -93,12 +96,12 @@ public class TaskQueue
         }
     }
 
-    public synchronized static Task getCurrentTask()
+    private synchronized static Task getCurrentTask()
     {
         return currentTask;
     }
 
-    public synchronized static void setCurrentTask(Task currentTask)
+    private synchronized static void setCurrentTask(Task currentTask)
     {
         TaskQueue.currentTask = currentTask;
     }
@@ -109,6 +112,12 @@ public class TaskQueue
             queueThread.interrupt();
     }
 
+    /**
+     * Puts a task on the queue.
+     *
+     * @param context
+     * @param task
+     */
     public static synchronized void execute(Context context, Task task)
     {
         //repeatedly assigning seems ugly, but should work.
@@ -116,6 +125,14 @@ public class TaskQueue
         tasks.add(task);
     }
 
+    /**
+     * Makes sure only one task of a type on the queue.  This would be useful on a search screen,
+     * for example.  If the first search was processing, and the user clicked search again, the
+     * first task shouldn't do anything to the screen when it returns.
+     *
+     * @param context
+     * @param task
+     */
     public static synchronized void executeSingleByType(Context context, Task task)
     {
         removeTasksByType(task.getClass());
@@ -128,6 +145,9 @@ public class TaskQueue
     }
 
     /**
+     * Removes tasks of a type from the queue.  Useful if you're worried about old tasks returning unexpectedly,
+     * or only want one task of a type running (more precisely, finishing).
+     *
      * There is a potential here for issues.  We can't easily block the take portion of the loop,
      * so this may result in unexpected issues.
      * @param c

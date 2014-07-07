@@ -5,6 +5,8 @@ import android.content.IntentFilter;
 import android.support.v4.content.LocalBroadcastManager;
 
 /**
+ * Loader that listens to the local broadcasts for refresh notifications.
+ *
  * Created by kgalligan on 7/4/14.
  */
 public abstract class AbstractLocalBroadcastReceiverLoader<D> extends AbstractDataLoader<D>
