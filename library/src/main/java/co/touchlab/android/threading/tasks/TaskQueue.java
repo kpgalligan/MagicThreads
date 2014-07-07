@@ -1,5 +1,7 @@
 package co.touchlab.android.threading.tasks;
 
+import android.app.Application;
+import android.content.Context;
 import de.greenrobot.event.EventBus;
 
 import java.util.Iterator;
@@ -15,8 +17,11 @@ public class TaskQueue
     private static LinkedBlockingQueue<Task> tasks = new LinkedBlockingQueue<Task>();
     private static QueueThread queueThread;
     private static Task currentTask;
+    private static Application application;
 
     static {
+        queueThread = new QueueThread();
+        queueThread.start();
         Runtime.getRuntime().addShutdownHook(new Thread(){
             @Override
             public void run()
@@ -28,7 +33,7 @@ public class TaskQueue
 
     public interface Task
     {
-        void run() throws Exception;
+        void run(Context context) throws Exception;
 
         /**
          * Handle Exception that occurred during processing.  Return true if handled, false if not.  If not handled, app will throw and probably crash.
@@ -48,13 +53,14 @@ public class TaskQueue
             {
                 while (true)
                 {
-                    Task task = topTask();
+
+                    Task task = tasks.take();
 
                     setCurrentTask(task);
 
                     try
                     {
-                        task.run();
+                        task.run(application);
                         Task postTask = getCurrentTask();
 
                         //May be null if cleared out
@@ -97,31 +103,23 @@ public class TaskQueue
         TaskQueue.currentTask = currentTask;
     }
 
-    private static synchronized Task topTask() throws InterruptedException
-    {
-        return tasks.take();
-    }
-
     private static synchronized void shutdown()
     {
         if(queueThread != null)
             queueThread.interrupt();
     }
 
-    public static synchronized void execute(final Task task)
+    public static synchronized void execute(Context context, Task task)
     {
-        if(queueThread == null)
-        {
-            queueThread = new QueueThread();
-            queueThread.start();
-        }
+        //repeatedly assigning seems ugly, but should work.
+        application = (Application)context.getApplicationContext();
         tasks.add(task);
     }
 
-    public static synchronized void executeSingleByType(Task task)
+    public static synchronized void executeSingleByType(Context context, Task task)
     {
         removeTasksByType(task.getClass());
-        execute(task);
+        execute(context, task);
     }
 
     private static synchronized void killThread()
@@ -129,7 +127,18 @@ public class TaskQueue
         queueThread = null;
     }
 
-    public static synchronized void removeTasksByType(Class c)
+    /**
+     * There is a potential here for issues.  We can't easily block the take portion of the loop,
+     * so this may result in unexpected issues.
+     * @param c
+     */
+    public static void removeTasksByType(Class c)
+    {
+        checkTasksQueue(c);
+        checkCurrentTaskForRemoval(c);
+    }
+
+    private static synchronized void checkTasksQueue(Class c)
     {
         Iterator<Task> taskIterator = tasks.iterator();
         while (taskIterator.hasNext())
@@ -138,7 +147,10 @@ public class TaskQueue
             if(c.equals(next.getClass()))
                 taskIterator.remove();
         }
+    }
 
+    private static synchronized void checkCurrentTaskForRemoval(Class c)
+    {
         Task currentTask = getCurrentTask();
         if(currentTask.getClass().equals(c))
             setCurrentTask(null);
