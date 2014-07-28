@@ -64,11 +64,6 @@ public class TaskQueue
                     try
                     {
                         task.run(application);
-                        Task postTask = getCurrentTask();
-
-                        //May be null if cleared out
-                        if(postTask != null)
-                            EventBus.getDefault().post(postTask);
 
                         setCurrentTask(null);
                     }

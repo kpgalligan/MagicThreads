@@ -2,6 +2,7 @@ package co.touchlab.android.threading.tasks;
 
 import android.content.Context;
 import co.touchlab.android.threading.utils.UiThreadContext;
+import de.greenrobot.event.EventBus;
 
 /**
  * Simple AsyncTask replacement.
@@ -16,15 +17,24 @@ import co.touchlab.android.threading.utils.UiThreadContext;
 public abstract class BsyncTask<D> implements TaskQueue.Task
 {
     protected int contextId;
+    private boolean cancel;
 
     protected abstract void doInBackground(Context context)throws Exception;
 
     protected abstract void onPostExecute(D host);
+
+    protected void cancelPost()
+    {
+        UiThreadContext.assertBackgroundThread();
+        cancel = true;
+    }
 
     @Override
     public final void run(Context context) throws Exception
     {
         UiThreadContext.assertBackgroundThread();
         doInBackground(context);
+        if(!cancel)
+            EventBus.getDefault().post(this);
     }
 }
