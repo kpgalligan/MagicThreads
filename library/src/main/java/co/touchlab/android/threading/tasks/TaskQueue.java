@@ -5,7 +5,9 @@ import android.content.Context;
 import de.greenrobot.event.EventBus;
 import de.greenrobot.event.SubscriberExceptionEvent;
 
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -18,28 +20,8 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class TaskQueue
 {
-    private static LinkedBlockingQueue<Task> tasks = new LinkedBlockingQueue<Task>();
-    private static QueueThread queueThread;
-    private static Task currentTask;
-    private static Application application;
-    private static EventBus eventBus;
-
-    static
-    {
-        queueThread = new QueueThread();
-        queueThread.start();
-        eventBus = new EventBus();
-        eventBus.register(new ErrorListener());
-
-        Runtime.getRuntime().addShutdownHook(new Thread()
-        {
-            @Override
-            public void run()
-            {
-                shutdown();
-            }
-        });
-    }
+    private static Map<String, TaskQueueActual> queueMap = new HashMap<String, TaskQueueActual>();
+    private static final String DEFAULT_QUEUE = "__DEFAULT";
 
     public interface Task
     {
@@ -54,88 +36,16 @@ public class TaskQueue
         boolean handleError(Exception e);
     }
 
-    public static class ErrorListener
+    private static synchronized TaskQueueActual loadQueue(String name)
     {
-        public void onEvent(SubscriberExceptionEvent exceptionEvent)
+        TaskQueueActual taskQueueActual = queueMap.get(name);
+        if(taskQueueActual == null)
         {
-            final Throwable throwable = exceptionEvent.throwable;
-
-            //EventBus will just log this.  Would prefer to blow up.
-            new Thread()
-            {
-                @Override
-                public void run()
-                {
-                    if (throwable instanceof RuntimeException)
-                        throw (RuntimeException) throwable;
-                    else if (throwable instanceof Error)
-                        throw (Error) throwable;
-                    else
-                        throw new RuntimeException(throwable);
-                }
-            }.start();
+            taskQueueActual = new TaskQueueActual();
+            queueMap.put(name, taskQueueActual);
         }
-    }
 
-
-    private static class QueueThread extends Thread
-    {
-        @Override
-        public void run()
-        {
-            try
-            {
-                while (true)
-                {
-
-                    Task task = tasks.take();
-
-                    setCurrentTask(task);
-
-                    try
-                    {
-                        task.run(application);
-
-                        setCurrentTask(null);
-                    }
-                    catch (Exception e)
-                    {
-                        boolean handled = task.handleError(e);
-                        if (!handled)
-                            throw new RuntimeException(e);
-                    }
-
-                    if (Thread.interrupted())
-                    {
-                        throw new InterruptedException();
-                    }
-                }
-            }
-            catch (InterruptedException e)
-            {
-                //
-            }
-            finally
-            {
-                killThread();
-            }
-        }
-    }
-
-    private synchronized static Task getCurrentTask()
-    {
-        return currentTask;
-    }
-
-    private synchronized static void setCurrentTask(Task currentTask)
-    {
-        TaskQueue.currentTask = currentTask;
-    }
-
-    private static synchronized void shutdown()
-    {
-        if (queueThread != null)
-            queueThread.interrupt();
+        return taskQueueActual;
     }
 
     /**
@@ -144,72 +54,20 @@ public class TaskQueue
      * @param context
      * @param task
      */
-    public static synchronized void execute(Context context, Task task)
+    public static void execute(Context context, Task task)
     {
-        //repeatedly assigning seems ugly, but should work.
-        application = (Application) context.getApplicationContext();
-        tasks.add(task);
+        execute(context, DEFAULT_QUEUE, task);
     }
 
     /**
-     * Makes sure only one task of a type on the queue.  This would be useful on a search screen,
-     * for example.  If the first search was processing, and the user clicked search again, the
-     * first task shouldn't do anything to the screen when it returns.
+     * Puts a task on the queue. Use for local ops. Faster responses.
      *
      * @param context
      * @param task
      */
-    public static synchronized void executeSingleByType(Context context, Task task)
+    public static void execute(Context context, String queue, Task task)
     {
-        removeTasksByType(task.getClass());
-        execute(context, task);
-    }
-
-    public static void post(Object event)
-    {
-        eventBus.post(event);
-    }
-
-    public static EventBus getEventBus()
-    {
-        return eventBus;
-    }
-
-    private static synchronized void killThread()
-    {
-        queueThread = null;
-    }
-
-    /**
-     * Removes tasks of a type from the queue.  Useful if you're worried about old tasks returning unexpectedly,
-     * or only want one task of a type running (more precisely, finishing).
-     * <p/>
-     * There is a potential here for issues.  We can't easily block the take portion of the loop,
-     * so this may result in unexpected issues.
-     *
-     * @param c
-     */
-    public static void removeTasksByType(Class c)
-    {
-        checkTasksQueue(c);
-        checkCurrentTaskForRemoval(c);
-    }
-
-    private static synchronized void checkTasksQueue(Class c)
-    {
-        Iterator<Task> taskIterator = tasks.iterator();
-        while (taskIterator.hasNext())
-        {
-            Task next = taskIterator.next();
-            if (c.equals(next.getClass()))
-                taskIterator.remove();
-        }
-    }
-
-    private static synchronized void checkCurrentTaskForRemoval(Class c)
-    {
-        Task currentTask = getCurrentTask();
-        if (currentTask.getClass().equals(c))
-            setCurrentTask(null);
+        TaskQueueActual queueActual = loadQueue(queue);
+        queueActual.execute(context, task);
     }
 }

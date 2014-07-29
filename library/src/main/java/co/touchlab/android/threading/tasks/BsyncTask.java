@@ -1,6 +1,7 @@
 package co.touchlab.android.threading.tasks;
 
 import android.content.Context;
+import co.touchlab.android.threading.eventbus.EventBusExt;
 import co.touchlab.android.threading.utils.UiThreadContext;
 import de.greenrobot.event.EventBus;
 
@@ -19,6 +20,15 @@ public abstract class BsyncTask<D> implements TaskQueue.Task
     protected int contextId;
     private boolean cancel;
 
+    protected BsyncTask()
+    {
+    }
+
+    protected BsyncTask(int contextId)
+    {
+        this.contextId = contextId;
+    }
+
     protected abstract void doInBackground(Context context)throws Exception;
 
     protected abstract void onPostExecute(D host);
@@ -35,6 +45,6 @@ public abstract class BsyncTask<D> implements TaskQueue.Task
         UiThreadContext.assertBackgroundThread();
         doInBackground(context);
         if(!cancel)
-            EventBus.getDefault().post(this);
+            EventBusExt.getDefault().post(this);
     }
 }

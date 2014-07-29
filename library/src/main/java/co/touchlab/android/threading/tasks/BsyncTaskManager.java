@@ -2,6 +2,7 @@ package co.touchlab.android.threading.tasks;
 
 import android.content.Context;
 import android.os.Bundle;
+import co.touchlab.android.threading.eventbus.EventBusExt;
 import co.touchlab.android.threading.utils.UiThreadContext;
 import de.greenrobot.event.EventBus;
 
@@ -40,14 +41,14 @@ public class BsyncTaskManager<D>
     {
         this.host = host;
         UiThreadContext.assertUiThread();
-        EventBus.getDefault().register(this);
+        EventBusExt.getDefault().register(this);
     }
 
     public void unregister()
     {
         this.host = null;
         UiThreadContext.assertUiThread();
-        EventBus.getDefault().unregister(this);
+        EventBusExt.getDefault().unregister(this);
     }
 
     public void onEventMainThread(BsyncTask bsyncTask)

@@ -1,6 +1,7 @@
 package co.touchlab.android.threading.loaders;
 
 import android.content.Context;
+import co.touchlab.android.threading.eventbus.EventBusExt;
 import de.greenrobot.event.EventBus;
 
 /**
@@ -15,7 +16,7 @@ public abstract class AbstractEventBusLoader<D> extends AbstractDataLoader<D>
 
     public AbstractEventBusLoader(Context context)
     {
-        this(context, EventBus.getDefault());
+        this(context, EventBusExt.getDefault());
     }
 
     public AbstractEventBusLoader(Context context, EventBus eventBus)
