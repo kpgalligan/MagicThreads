@@ -3,6 +3,7 @@ package co.touchlab.android.threading.tasks;
 import android.app.Application;
 import android.content.Context;
 import de.greenrobot.event.EventBus;
+import de.greenrobot.event.SubscriberExceptionEvent;
 
 import java.util.Iterator;
 import java.util.concurrent.Executor;
@@ -12,7 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * Relatively simple queue implementation.  Supports removing tasks by type.  Simple method of
  * preventing odd results when old messages are put on the queue.
- *
+ * <p/>
  * Created by kgalligan on 7/5/14.
  */
 public class TaskQueue
@@ -21,11 +22,17 @@ public class TaskQueue
     private static QueueThread queueThread;
     private static Task currentTask;
     private static Application application;
+    private static EventBus eventBus;
 
-    static {
+    static
+    {
         queueThread = new QueueThread();
         queueThread.start();
-        Runtime.getRuntime().addShutdownHook(new Thread(){
+        eventBus = new EventBus();
+        eventBus.register(new ErrorListener());
+
+        Runtime.getRuntime().addShutdownHook(new Thread()
+        {
             @Override
             public void run()
             {
@@ -46,6 +53,30 @@ public class TaskQueue
          */
         boolean handleError(Exception e);
     }
+
+    public static class ErrorListener
+    {
+        public void onEvent(SubscriberExceptionEvent exceptionEvent)
+        {
+            final Throwable throwable = exceptionEvent.throwable;
+
+            //EventBus will just log this.  Would prefer to blow up.
+            new Thread()
+            {
+                @Override
+                public void run()
+                {
+                    if (throwable instanceof RuntimeException)
+                        throw (RuntimeException) throwable;
+                    else if (throwable instanceof Error)
+                        throw (Error) throwable;
+                    else
+                        throw new RuntimeException(throwable);
+                }
+            }.start();
+        }
+    }
+
 
     private static class QueueThread extends Thread
     {
@@ -103,7 +134,7 @@ public class TaskQueue
 
     private static synchronized void shutdown()
     {
-        if(queueThread != null)
+        if (queueThread != null)
             queueThread.interrupt();
     }
 
@@ -116,7 +147,7 @@ public class TaskQueue
     public static synchronized void execute(Context context, Task task)
     {
         //repeatedly assigning seems ugly, but should work.
-        application = (Application)context.getApplicationContext();
+        application = (Application) context.getApplicationContext();
         tasks.add(task);
     }
 
@@ -134,6 +165,16 @@ public class TaskQueue
         execute(context, task);
     }
 
+    public static void post(Object event)
+    {
+        eventBus.post(event);
+    }
+
+    public static EventBus getEventBus()
+    {
+        return eventBus;
+    }
+
     private static synchronized void killThread()
     {
         queueThread = null;
@@ -142,9 +183,10 @@ public class TaskQueue
     /**
      * Removes tasks of a type from the queue.  Useful if you're worried about old tasks returning unexpectedly,
      * or only want one task of a type running (more precisely, finishing).
-     *
+     * <p/>
      * There is a potential here for issues.  We can't easily block the take portion of the loop,
      * so this may result in unexpected issues.
+     *
      * @param c
      */
     public static void removeTasksByType(Class c)
@@ -159,7 +201,7 @@ public class TaskQueue
         while (taskIterator.hasNext())
         {
             Task next = taskIterator.next();
-            if(c.equals(next.getClass()))
+            if (c.equals(next.getClass()))
                 taskIterator.remove();
         }
     }
@@ -167,7 +209,7 @@ public class TaskQueue
     private static synchronized void checkCurrentTaskForRemoval(Class c)
     {
         Task currentTask = getCurrentTask();
-        if(currentTask.getClass().equals(c))
+        if (currentTask.getClass().equals(c))
             setCurrentTask(null);
     }
 }
