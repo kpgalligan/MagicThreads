@@ -5,21 +5,29 @@ package co.touchlab.android.threading.loaders.networked;
  */
 public class DoubleTapResult<D, E>
 {
+    public enum Status
+    {
+        Data, NoData, Waiting, Error
+    }
+
+    private final Status status;
     private final D result;
     private final E error;
 
-    public static <D, E> DoubleTapResult<D, E> result(D result)
-    {
-        return new DoubleTapResult<D, E>(result, null);
-    }
+//    public static <D, E> DoubleTapResult<D, E> result(D result)
+//    {
+//        return new DoubleTapResult<D, E>(result, null);
+//    }
+//
+//    public static <D> DoubleTapResult<Void, D> error(D error)
+//    {
+//        return new DoubleTapResult<Void, D>(null, error);
+//    }
 
-    public static <D> DoubleTapResult<Void, D> error(D error)
-    {
-        return new DoubleTapResult<Void, D>(null, error);
-    }
 
-    public DoubleTapResult(D result, E error)
+    public DoubleTapResult(Status status, D result, E error)
     {
+        this.status = status;
         this.result = result;
         this.error = error;
     }
@@ -34,9 +42,9 @@ public class DoubleTapResult<D, E>
         return error;
     }
 
-    public boolean isError()
+    public Status getStatus()
     {
-        return error != null;
+        return status;
     }
 }
 

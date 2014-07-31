@@ -1,6 +1,7 @@
 package co.touchlab.android.threading.loaders.networked;
 
 import android.content.Context;
+import co.touchlab.android.threading.eventbus.EventBusExt;
 import de.greenrobot.event.EventBus;
 
 /**
@@ -12,7 +13,7 @@ public abstract class AbstractDoubleTapEventBusLoader<D, E> extends AbstractDoub
 
     public AbstractDoubleTapEventBusLoader(Context context)
     {
-        super(context);
+        this(context, EventBusExt.getDefault());
     }
 
     public AbstractDoubleTapEventBusLoader(Context context, EventBus eventBus)
