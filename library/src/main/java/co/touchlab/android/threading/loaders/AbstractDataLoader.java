@@ -14,6 +14,7 @@ import java.io.PrintWriter;
 public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
 {
     private D data;
+    private boolean registered;
 
     public AbstractDataLoader(Context context)
     {
@@ -88,7 +89,7 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
             data = null;
         }
 
-        unregisterContentChangedObserver();
+        callUnregister();
     }
 
     /* Runs on a worker thread */
@@ -113,10 +114,28 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
 
         if (localData != null)
         {
-            registerContentChangedObserver();
+            callRegister();
         }
 
         return localData;
+    }
+
+    private synchronized void callRegister()
+    {
+        if(!registered)
+        {
+            registered = true;
+            registerContentChangedObserver();
+        }
+    }
+
+    private synchronized void callUnregister()
+    {
+        if(registered)
+        {
+            registered = false;
+            unregisterContentChangedObserver();
+        }
     }
 
     protected abstract D findContent()throws Exception;

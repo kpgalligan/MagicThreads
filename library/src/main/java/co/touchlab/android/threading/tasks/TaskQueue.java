@@ -36,7 +36,7 @@ public class TaskQueue
         boolean handleError(Exception e);
     }
 
-    private static synchronized TaskQueueActual loadQueue(String name)
+    public static synchronized TaskQueueActual loadQueue(String name)
     {
         TaskQueueActual taskQueueActual = queueMap.get(name);
         if(taskQueueActual == null)
@@ -46,6 +46,11 @@ public class TaskQueue
         }
 
         return taskQueueActual;
+    }
+
+    public static TaskQueueActual loadQueueDefault()
+    {
+        return loadQueue(DEFAULT_QUEUE);
     }
 
     /**

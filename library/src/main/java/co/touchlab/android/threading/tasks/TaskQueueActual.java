@@ -166,6 +166,19 @@ public class TaskQueueActual
         checkCurrentTaskForRemoval(c);
     }
 
+    public interface QueueQuery
+    {
+        void query(Task task);
+    }
+
+    public synchronized void query(QueueQuery queueQuery)
+    {
+        for (Task task : tasks)
+        {
+            queueQuery.query(task);
+        }
+    }
+
     private synchronized void checkTasksQueue(Class c)
     {
         Iterator<Task> taskIterator = tasks.iterator();

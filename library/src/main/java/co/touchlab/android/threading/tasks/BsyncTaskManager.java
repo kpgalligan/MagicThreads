@@ -64,6 +64,26 @@ public class BsyncTaskManager<D>
         TaskQueue.execute(context, task);
     }
 
+    public interface BsyncTaskQuery
+    {
+        void query(BsyncTask bsyncTask);
+    }
+
+    public void query(final BsyncTaskQuery query)
+    {
+        TaskQueue.loadQueueDefault().query(new TaskQueueActual.QueueQuery()
+        {
+            @Override
+            public void query(TaskQueue.Task task)
+            {
+                if(task instanceof BsyncTask)
+                {
+                    query.query((BsyncTask) task);
+                }
+            }
+        });
+    }
+
     public void onSaveInstanceState(Bundle outState)
     {
         UiThreadContext.assertUiThread();
