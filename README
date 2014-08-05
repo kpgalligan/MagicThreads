@@ -1,15 +1,1 @@
-Superbus (name suggestions welcome) is a synchronization bus service for Android.  We've built several projects that need to do background syncing.  This is the functionality that emerged from that.  This is highly slanted towards network communication, but it could in theory be used for architecting a local storage scheduling system (or whatever).
-
-OK. V2 was promised "soon".  Not sure this qualified as "soon", but V2 is here.
-
-Testing is happening in apps, but we should be having some real "testing" soon.  The docs written for the old version are conceptually correct, but syntactically old.
-
-Command creation is relatively current in docs, but not config.  The config and setup is somewhat different now.
-
-Lots of code was pulled.  There used to be many ways to store command lists, now its just sql.  There used to be many command storage implementations, now its just gson (although you could implement your own).
-
-There's also support for sqlciper so you can have encrypted bus storage, although that hasn't yet been tested in any way.  Coming.
-
-Also, in the near future, you can choose command-based or state-based sync.  My offline sync theory concocted this whole "command-based" plan, and like all new fancy ideas, I pushed on it too hard.  Not all situations need a command bus.  However, even state-based sync could use some nice coordination.
-
-Some other changes are coming.  Short story, we've learned a lot, and that learning keeps going.
+MagicThreads is a threading support library for Android.  Um, look at confluence.
