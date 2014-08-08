@@ -15,7 +15,7 @@ import de.greenrobot.event.EventBus;
  *
  * Created by kgalligan on 7/5/14.
  */
-public abstract class BsyncTask<D> implements TaskQueue.Task
+public abstract class BsyncTask<D> extends TaskQueue.Task
 {
     protected int contextId;
     private boolean cancel;
@@ -44,6 +44,11 @@ public abstract class BsyncTask<D> implements TaskQueue.Task
     {
         UiThreadContext.assertBackgroundThread();
         doInBackground(context);
+    }
+
+    @Override
+    protected void onComplete()
+    {
         if(!cancel)
             EventBusExt.getDefault().post(this);
     }

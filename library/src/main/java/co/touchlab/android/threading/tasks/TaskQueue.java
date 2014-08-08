@@ -2,6 +2,7 @@ package co.touchlab.android.threading.tasks;
 
 import android.app.Application;
 import android.content.Context;
+import co.touchlab.android.threading.utils.UiThreadContext;
 import de.greenrobot.event.EventBus;
 import de.greenrobot.event.SubscriberExceptionEvent;
 
@@ -13,8 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * Relatively simple queue implementation.  Supports removing tasks by type.  Simple method of
- * preventing odd results when old messages are put on the queue.
+ * Relatively simple queue implementation.  See TaskQueueActual for detail on implementation.
  * <p/>
  * Created by kgalligan on 7/5/14.
  */
@@ -23,9 +23,9 @@ public class TaskQueue
     private static Map<String, TaskQueueActual> queueMap = new HashMap<String, TaskQueueActual>();
     private static final String DEFAULT_QUEUE = "__DEFAULT";
 
-    public interface Task
+    public abstract static class Task
     {
-        void run(Context context) throws Exception;
+        protected abstract void run(Context context) throws Exception;
 
         /**
          * Handle Exception that occurred during processing.  Return true if handled, false if not.  If not handled, app will throw and probably crash.
@@ -33,11 +33,27 @@ public class TaskQueue
          * @param e
          * @return true if handled, false if not (which will throw it)
          */
-        boolean handleError(Exception e);
+        protected abstract boolean handleError(Exception e);
+
+        /**
+         * Post result to EventBus (or whatever).  This will happen after all queue orchestration is
+         * complete.
+         */
+        protected void onComplete()
+        {
+
+        }
     }
 
-    public static synchronized TaskQueueActual loadQueue(String name)
+    /**
+     * Get a direct reference to your queue.  Call on main thread.
+     * @param name
+     * @return
+     */
+    public static TaskQueueActual loadQueue(String name)
     {
+        UiThreadContext.assertUiThread();
+
         TaskQueueActual taskQueueActual = queueMap.get(name);
         if(taskQueueActual == null)
         {

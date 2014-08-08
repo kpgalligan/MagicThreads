@@ -2,11 +2,18 @@ package co.touchlab.android.threading.tasks;
 
 import android.app.Application;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import co.touchlab.android.threading.tasks.TaskQueue.Task;
+import co.touchlab.android.threading.utils.UiThreadContext;
 import de.greenrobot.event.EventBus;
 import de.greenrobot.event.SubscriberExceptionEvent;
 
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -14,132 +21,52 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class TaskQueueActual
 {
-    private LinkedBlockingQueue<Task> tasks = new LinkedBlockingQueue<Task>();
-    private QueueThread queueThread;
+    private final Handler handler;
+    private final PollRunnable pollRunnable = new PollRunnable();
+    private final PostExeRunnable postExeRunnable = new PostExeRunnable();
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private Queue<Task> tasks = new LinkedList<Task>();
     private Task currentTask;
     private Application application;
 
     public TaskQueueActual()
     {
-        queueThread = new QueueThread();
-        queueThread.start();
-
-        //Is this strictly necessary?  Not sure.  The whole mess will get shut down anyway, but probably best to kill threads explicitly.  TODO: look into this.
-        Runtime.getRuntime().addShutdownHook(new Thread()
-        {
-            @Override
-            public void run()
-            {
-                shutdown();
-            }
-        });
-    }
-
-    private class QueueThread extends Thread
-    {
-        @Override
-        public void run()
-        {
-            try
-            {
-                while (true)
-                {
-                    //TODO: This is not thread safe with other methods.  Need a better way to handle this.
-                    Task task = tasks.take();
-
-                    setCurrentTask(task);
-
-                    try
-                    {
-                        task.run(application);
-
-                        setCurrentTask(null);
-                    }
-                    catch (Exception e)
-                    {
-                        boolean handled = task.handleError(e);
-                        if (!handled)
-                            throw new RuntimeException(e);
-                    }
-
-                    if (Thread.interrupted())
-                    {
-                        throw new InterruptedException();
-                    }
-                }
-            }
-            catch (InterruptedException e)
-            {
-                //
-            }
-            finally
-            {
-                killThread();
-            }
-        }
-    }
-
-    private synchronized Task getCurrentTask()
-    {
-        return currentTask;
-    }
-
-    private synchronized void setCurrentTask(Task currentTask)
-    {
-        this.currentTask = currentTask;
-    }
-
-    private synchronized void shutdown()
-    {
-        if (queueThread != null)
-            queueThread.interrupt();
+        handler = new Handler(Looper.getMainLooper());
     }
 
     /**
-     * Puts a task on the queue.
+     * Puts a task on the queue.  Call on main thread only.
      *
      * @param context
      * @param task
      */
-    public synchronized void execute(Context context, Task task)
+    public void execute(Context context, Task task)
     {
+        UiThreadContext.assertUiThread();
+
         //repeatedly assigning seems ugly, but should work.
         application = (Application) context.getApplicationContext();
         tasks.add(task);
+
+        resetPollRunnable();
     }
 
     /**
-     * Makes sure only one task of a type on the queue.  This would be useful on a search screen,
-     * for example.  If the first search was processing, and the user clicked search again, the
-     * first task shouldn't do anything to the screen when it returns.
+     * Query existing tasks.  Call on main thread only.
      *
-     * @param context
-     * @param task
+     * @param queueQuery
      */
-    public synchronized void executeSingleByType(Context context, Task task)
+    public void query(QueueQuery queueQuery)
     {
-        removeTasksByType(task.getClass());
-        execute(context, task);
-    }
+        UiThreadContext.assertUiThread();
 
-    private synchronized void killThread()
-    {
-        queueThread = null;
-    }
+        for (Task task : tasks)
+        {
+            queueQuery.query(task);
+        }
 
-    /**
-     * Removes tasks of a type from the queue.  Useful if you're worried about old tasks returning unexpectedly,
-     * or only want one task of a type running (more precisely, finishing).
-     * <p/>
-     * There is a potential here for issues.  We can't easily block the take portion of the loop,
-     * so this may result in unexpected issues.
-     *
-     * @param c
-     */
-    public synchronized void removeTasksByType(Class c)
-    {
-        checkTasksQueue(c);
-        checkCurrentTaskForRemoval(c);
+        if(currentTask != null)
+            queueQuery.query(currentTask);
     }
 
     public interface QueueQuery
@@ -147,31 +74,74 @@ public class TaskQueueActual
         void query(Task task);
     }
 
-    public synchronized void query(QueueQuery queueQuery)
+    private class PollRunnable implements Runnable
     {
-        for (Task task : tasks)
+        @Override
+        public void run()
         {
-            queueQuery.query(task);
-        }
-        Task currentTask = getCurrentTask();
-        queueQuery.query(currentTask);
-    }
+            UiThreadContext.assertUiThread();
 
-    private synchronized void checkTasksQueue(Class c)
-    {
-        Iterator<Task> taskIterator = tasks.iterator();
-        while (taskIterator.hasNext())
-        {
-            Task next = taskIterator.next();
-            if (c.equals(next.getClass()))
-                taskIterator.remove();
+            Task task = tasks.poll();
+            if (task != null)
+            {
+                currentTask = task;
+                executorService.execute(new ExeTask(task));
+            }
         }
     }
 
-    private synchronized void checkCurrentTaskForRemoval(Class c)
+    private class ExeTask implements Runnable
     {
-        Task currentTask = getCurrentTask();
-        if (currentTask.getClass().equals(c))
-            setCurrentTask(null);
+        private Task task;
+
+        private ExeTask(Task task)
+        {
+            this.task = task;
+        }
+
+        @Override
+        public void run()
+        {
+            UiThreadContext.assertBackgroundThread();
+
+            try
+            {
+                task.run(application);
+            }
+            catch (Exception e)
+            {
+                boolean handled = task.handleError(e);
+                if (!handled)
+                    throw new RuntimeException(e);
+            }
+            finally
+            {
+                handler.post(postExeRunnable);
+            }
+        }
+    }
+
+    private class PostExeRunnable implements Runnable
+    {
+        @Override
+        public void run()
+        {
+            UiThreadContext.assertUiThread();
+
+            if(currentTask != null)
+            {
+                Task task = currentTask;
+                currentTask = null;
+                task.onComplete();
+            }
+
+            resetPollRunnable();
+        }
+    }
+
+    private void resetPollRunnable()
+    {
+        handler.removeCallbacks(pollRunnable);
+        handler.post(pollRunnable);
     }
 }
