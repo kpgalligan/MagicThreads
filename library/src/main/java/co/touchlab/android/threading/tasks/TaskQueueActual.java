@@ -35,30 +35,6 @@ public class TaskQueueActual
         });
     }
 
-    public static class ErrorListener
-    {
-        public void onEvent(SubscriberExceptionEvent exceptionEvent)
-        {
-            final Throwable throwable = exceptionEvent.throwable;
-
-            //EventBus will just log this.  Would prefer to blow up.
-            new Thread()
-            {
-                @Override
-                public void run()
-                {
-                    if (throwable instanceof RuntimeException)
-                        throw (RuntimeException) throwable;
-                    else if (throwable instanceof Error)
-                        throw (Error) throwable;
-                    else
-                        throw new RuntimeException(throwable);
-                }
-            }.start();
-        }
-    }
-
-
     private class QueueThread extends Thread
     {
         @Override
@@ -68,7 +44,7 @@ public class TaskQueueActual
             {
                 while (true)
                 {
-
+                    //TODO: This is not thread safe with other methods.  Need a better way to handle this.
                     Task task = tasks.take();
 
                     setCurrentTask(task);
@@ -177,6 +153,8 @@ public class TaskQueueActual
         {
             queueQuery.query(task);
         }
+        Task currentTask = getCurrentTask();
+        queueQuery.query(currentTask);
     }
 
     private synchronized void checkTasksQueue(Class c)
