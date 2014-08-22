@@ -9,6 +9,7 @@ import co.touchlab.android.threading.utils.UiThreadContext;
 import de.greenrobot.event.EventBus;
 import de.greenrobot.event.SubscriberExceptionEvent;
 
+import javax.swing.text.html.HTMLDocument;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -90,6 +91,27 @@ public class TaskQueueActual
         }
     }
 
+    private class ThrowRunnable implements Runnable
+    {
+        private Throwable cause;
+
+        private ThrowRunnable(Throwable cause)
+        {
+            this.cause = cause;
+        }
+
+        @Override
+        public void run()
+        {
+            if(cause instanceof RuntimeException)
+                throw (RuntimeException)cause;
+            else if(cause instanceof Error)
+                throw (Error)cause;
+            else
+                throw new RuntimeException(cause);
+        }
+    }
+
     private class ExeTask implements Runnable
     {
         private Task task;
@@ -112,7 +134,7 @@ public class TaskQueueActual
             {
                 boolean handled = task.handleError(e);
                 if (!handled)
-                    throw new RuntimeException(e);
+                    handler.post(new ThrowRunnable(e));
             }
             finally
             {
