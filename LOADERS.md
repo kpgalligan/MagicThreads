@@ -45,7 +45,9 @@ from the server that can be translated into string resource references in some m
 
 For a list of SomeData and using an int for errors...
 
+```java
 public class SomeDataLoader extends AbstractDoubleTapEventBusLoader<List<SomeData>, Integer>
+```
 
 The methods to implement are:
 
