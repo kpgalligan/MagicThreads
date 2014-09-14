@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">MagicThreadsDemo</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="base_url">https://droidcon-server.herokuapp.com</string>
+
+    <integer name="conventionId">2000</integer>
+
+    <string name="title_activity_task_demo">TaskDemo</string>
+    <string name="title_activity_options">OptionsActivity</string>
+    <string name="title_activity_double_tap_loader_demo">DoubleTapLoaderDemoActivity</string>
+
+</resources>

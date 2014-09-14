@@ -50,10 +50,8 @@ public class TaskQueue
      * @param name
      * @return
      */
-    public static TaskQueueActual loadQueue(String name)
+    public static synchronized TaskQueueActual loadQueue(String name)
     {
-        UiThreadContext.assertUiThread();
-
         TaskQueueActual taskQueueActual = queueMap.get(name);
         if(taskQueueActual == null)
         {

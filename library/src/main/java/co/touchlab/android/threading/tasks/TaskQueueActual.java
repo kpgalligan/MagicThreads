@@ -41,7 +41,24 @@ public class TaskQueueActual
      * @param context
      * @param task
      */
-    public void execute(Context context, Task task)
+    public void execute(final Context context, final Task task)
+    {
+        if(UiThreadContext.isInUiThread())
+        {
+            callExecute(context, task);
+        }
+        else
+        {
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    callExecute(context, task);
+                }
+            });
+        }
+    }
+
+    private void callExecute(Context context, Task task)
     {
         UiThreadContext.assertUiThread();
 

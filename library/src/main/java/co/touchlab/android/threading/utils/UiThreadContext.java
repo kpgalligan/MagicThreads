@@ -15,11 +15,15 @@ public class UiThreadContext
      */
     public static void assertUiThread()
     {
+        if(!isInUiThread())
+            throw new RuntimeException("This call must be in UI thread");
+    }
+
+    public static boolean isInUiThread() {
         Thread uiThread = Looper.getMainLooper().getThread();
         Thread currentThread = Thread.currentThread();
 
-        if(uiThread != currentThread)
-            throw new RuntimeException("This call must be in UI thread");
+        return uiThread == currentThread;
     }
 
     /**
@@ -27,20 +31,7 @@ public class UiThreadContext
      */
     public static void assertBackgroundThread()
     {
-        Thread uiThread = null;
-        Thread currentThread = null;
-        try
-        {
-            uiThread = Looper.getMainLooper().getThread();
-            currentThread = Thread.currentThread();
-        }
-        catch (Exception e)
-        {
-            //Probably in unit tests
-            return;
-        }
-
-        if(uiThread == currentThread)
+        if(isInUiThread())
             throw new RuntimeException("This call must be in background thread");
     }
 }
