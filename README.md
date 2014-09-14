@@ -28,6 +28,8 @@ However, as I went along "fixing" them, I found out why most of that complexity 
 come around full circle. Assuming you aren't recreating the way the UI works (Square with Mortar/Flow
 for example), Loaders work well.
 
+[More Loaders Info](https://github.com/touchlab/MagicThreads/blob/master/LOADERS.md)
+
 ## tasks
 
 BsyncTask works like AsyncTask, but attempts to support rotations, and aligning a reference to a caller

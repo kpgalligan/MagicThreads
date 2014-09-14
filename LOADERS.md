@@ -61,28 +61,38 @@ Future extensions will have a way of distinguishing if the remote data has actua
 
 The other complex part of this is the loader callbacks.
 
+```java
 new LoaderManager.LoaderCallbacks<DoubleTapResult<List<SomeData>, Integer>>()
+```
 
 There's a new type, DoubleTapResult. It takes the same generics as the loader:
 
+```java
 DoubleTapResult<D, E>
+```
 
 In our example
 
+```java
 DoubleTapResult<List<SomeData>, Integer>
+```
 
 The result class has three members:
 
+```java
 private final Status status;
 private final D result;
 private final E error;
+```
 
 The status tells you where things are currently at:
 
+```java
 public enum Status
 {
     Data, NoData, Waiting, Error
 }
+```
 
 Data - You have data.  Show it, and assume you're done, unless another Data message comes in.
 
@@ -97,6 +107,7 @@ data, or NoData, if your remote call cleared out the local data.
 
 In 'onLoadFinished', run a switch to see what the status is:
 
+```java
 switch (result.getStatus())
 {
     case Waiting:
@@ -114,6 +125,7 @@ switch (result.getStatus())
     default:
         throw new UnsupportedOperationException("Weird");
 }
+```
 
 This is fairly experimental, so there are some weird cases to sort out.  If local cache returns an empty list, that's funcationally the same
 as NoData, but your code will need to distinguish that.  Alternatively, return null if your list is empty from findLocalContent.
