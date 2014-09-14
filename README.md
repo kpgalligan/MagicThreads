@@ -1,6 +1,11 @@
 MagicThreads is a threading support library for Android.  Its mostly for internal work at TouchLab, so you'll find the
 docs kind of lacking, but its good stuff.
 
+Demo project is in a different repo.  Intellij doesn't like gradle android projects.  Studio didn't seem to like 
+the java project.
+
+https://github.com/touchlab/MagicThreadsDemo
+
 ## errorcontrol
 
 This is in development. The basic idea is there are 2 types of exceptions in this world:
@@ -39,44 +44,3 @@ itself. Its safer than using surrogate boolean state, and makes rotation support
 
 UiThreadContext lets you assert if you're in the main thread or not in the main thread. I sometimes put that into
 methods where the calling context isn't entirely clear.
-
-### loaders
- 
-The basic way loaders work. You do some thing in the background, the data is given to the foreground. It'll do some 
-caching so rotations don't trigger reloads. You can also listen for data update events, and tell the loader to refresh.
-
-That's the simple version. If you look at the code for loaders, things seem far more complex. There's really a lot
-going on there.
-
-For the most part, loaders are suggested to be used with ContentProvider. Unless you're sharing data outside of your
-app, I've never been a fan. Long story. Anyway, you don't *need* to use ContentProvider for loaders, but if you don't, 
-you need to do a lot of complex hand coding. This part of the lib attempts to avoid that.
-
-#### AbstractDataLoader
-
-The top level parent. It provides the abstract methods:
-
-findContent - Override this and do your data loading here.
-handleError - Explicit error handling. Return false and crash, true and you've "handled" the Exception
-registerContentChangedObserver - Register for updates (generally let a subclass implement this)
-unregisterContentChangedObserver - Unregister for updates (generally let a subclass implement this)
-
-Generally you don't extend AbstractDataLoader directly.
-
-#### AbstractEventBusLoader
-
-Registers to EventBus for update notifications.  You'll need to provide your own "onEvent" methods.
-
-#### AbstractLocalBroadcastReceiverLoader
-
-Use with LocalBroadcastManager
-
-#### AbstractSmoothLocalBroadcastReceiverLoader
-
-If you're expecting multiple notifications in a short period, this will smooth them out.
-
-#### AbstractDoubleTapLoader
-
-This is basic in concept, but kind of complex in implementation.  Basically, if you have data that is coming from 
-the web, but may be locally cached, this will be good for you.  It'll load local, kick off remote loading, and 
-update as either come in.  The rules are sort of complex. See example (when finished, which its not).
