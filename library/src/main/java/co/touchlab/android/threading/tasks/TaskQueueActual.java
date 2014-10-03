@@ -69,27 +69,10 @@ public class TaskQueueActual
         resetPollRunnable();
     }
 
-    /**
-     * Query existing tasks.  Call on main thread only.
-     *
-     * @param queueQuery
-     */
-    public void query(QueueQuery queueQuery)
+    private void resetPollRunnable()
     {
-        UiThreadContext.assertUiThread();
-
-        for (Task task : tasks)
-        {
-            queueQuery.query(task);
-        }
-
-        if(currentTask != null)
-            queueQuery.query(currentTask);
-    }
-
-    public interface QueueQuery
-    {
-        void query(Task task);
+        handler.removeCallbacks(pollRunnable);
+        handler.post(pollRunnable);
     }
 
     private class PollRunnable implements Runnable
@@ -104,6 +87,37 @@ public class TaskQueueActual
             {
                 currentTask = task;
                 executorService.execute(new ExeTask(task));
+            }
+        }
+    }
+
+    private class ExeTask implements Runnable
+    {
+        private Task task;
+
+        private ExeTask(Task task)
+        {
+            this.task = task;
+        }
+
+        @Override
+        public void run()
+        {
+            UiThreadContext.assertBackgroundThread();
+
+            try
+            {
+                task.run(application);
+            }
+            catch (Throwable e)
+            {
+                boolean handled = task.handleError(e);
+                if (!handled)
+                    handler.post(new ThrowRunnable(e));
+            }
+            finally
+            {
+                handler.post(postExeRunnable);
             }
         }
     }
@@ -129,37 +143,6 @@ public class TaskQueueActual
         }
     }
 
-    private class ExeTask implements Runnable
-    {
-        private Task task;
-
-        private ExeTask(Task task)
-        {
-            this.task = task;
-        }
-
-        @Override
-        public void run()
-        {
-            UiThreadContext.assertBackgroundThread();
-
-            try
-            {
-                task.run(application);
-            }
-            catch (Exception e)
-            {
-                boolean handled = task.handleError(e);
-                if (!handled)
-                    handler.post(new ThrowRunnable(e));
-            }
-            finally
-            {
-                handler.post(postExeRunnable);
-            }
-        }
-    }
-
     private class PostExeRunnable implements Runnable
     {
         @Override
@@ -167,20 +150,42 @@ public class TaskQueueActual
         {
             UiThreadContext.assertUiThread();
 
-            if(currentTask != null)
+            try
             {
-                Task task = currentTask;
-                currentTask = null;
-                task.onComplete();
+                if(currentTask != null)
+                {
+                    Task task = currentTask;
+                    currentTask = null;
+                    task.onComplete();
+                }
             }
-
-            resetPollRunnable();
+            finally
+            {
+                resetPollRunnable();
+            }
         }
     }
 
-    private void resetPollRunnable()
+    /**
+     * Query existing tasks.  Call on main thread only.
+     *
+     * @param queueQuery
+     */
+    public void query(QueueQuery queueQuery)
     {
-        handler.removeCallbacks(pollRunnable);
-        handler.post(pollRunnable);
+        UiThreadContext.assertUiThread();
+
+        for (Task task : tasks)
+        {
+            queueQuery.query(task);
+        }
+
+        if(currentTask != null)
+            queueQuery.query(currentTask);
+    }
+
+    public interface QueueQuery
+    {
+        void query(Task task);
     }
 }

@@ -33,7 +33,7 @@ public class TaskQueue
          * @param e
          * @return true if handled, false if not (which will throw it)
          */
-        protected abstract boolean handleError(Exception e);
+        protected abstract boolean handleError(Throwable e);
 
         /**
          * Post result to EventBus (or whatever).  This will happen after all queue orchestration is
