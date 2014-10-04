@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.util.Log;
 import co.touchlab.android.threading.tasks.persisted.storage.StoredCommandAdapter;
+import co.touchlab.android.threading.tasks.persisted.storage.gson.GsonStoredCommandAdapter;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.CursorIntf;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseFactory;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseIntf;
@@ -29,6 +30,16 @@ public class CommandPersistenceProvider implements PersistenceProvider
     private BusLog log;
     private SQLiteDatabaseFactory databaseFactory;
     private StoredCommandAdapter storedCommandAdapter;
+
+    public CommandPersistenceProvider(SQLiteDatabaseFactory databaseFactory)
+    {
+        this(databaseFactory, null);
+    }
+
+    public CommandPersistenceProvider(SQLiteDatabaseFactory databaseFactory, BusLog log)
+    {
+        this(databaseFactory, new GsonStoredCommandAdapter(), log);
+    }
 
     public CommandPersistenceProvider(SQLiteDatabaseFactory databaseFactory, StoredCommandAdapter storedCommandAdapter, BusLog log)
     {

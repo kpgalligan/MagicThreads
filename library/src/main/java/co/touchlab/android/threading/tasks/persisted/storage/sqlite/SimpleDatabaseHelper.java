@@ -14,25 +14,23 @@ import co.touchlab.android.threading.tasks.persisted.CommandPersistenceProvider;
  */
 public class SimpleDatabaseHelper extends SQLiteOpenHelper
 {
-    public final static String DATABASE_FILE_NAME = "superbusstorage";
-
     private final static int VERSION = 1;
 
     private static SimpleDatabaseHelper INSTANCE;
 
-    public static synchronized SimpleDatabaseHelper getInstance(Context context)
+    public static synchronized SimpleDatabaseHelper getInstance(Context context, String fileName)
     {
         if (INSTANCE == null)
         {
-            INSTANCE = new SimpleDatabaseHelper(context.getApplicationContext());
+            INSTANCE = new SimpleDatabaseHelper(context.getApplicationContext(), fileName);
         }
 
         return INSTANCE;
     }
 
-    private SimpleDatabaseHelper(Context context)
+    private SimpleDatabaseHelper(Context context, String fileName)
     {
-        super(context, DATABASE_FILE_NAME, null, VERSION);
+        super(context, fileName, null, VERSION);
     }
 
     @Override

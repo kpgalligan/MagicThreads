@@ -2,6 +2,11 @@ package co.touchlab.android.threading.tasks.persisted;
 
 import android.app.Notification;
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
+import co.touchlab.android.threading.tasks.persisted.storage.sqlite.ClearSQLiteDatabase;
+import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseFactory;
+import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseIntf;
+import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SimpleDatabaseHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +20,7 @@ import java.util.List;
  */
 public class PersistedTaskQueueConfig
 {
+    public static final String PERSISTED_QUEUE = "PERSISTED_QUEUE";
     List<SuperbusEventListener> eventListeners = new ArrayList<SuperbusEventListener>();
     BusLog log;
     CommandPurgePolicy commandPurgePolicy;
@@ -58,7 +64,7 @@ public class PersistedTaskQueueConfig
             return this;
         }
 
-        public PersistedTaskQueueConfig build() throws ConfigException
+        public PersistedTaskQueueConfig build(Context context) throws ConfigException
         {
             if (config.log == null)
                 config.log = new BusLogImpl();
@@ -66,7 +72,9 @@ public class PersistedTaskQueueConfig
                 config.commandPurgePolicy = new TransientMethuselahCommandPurgePolicy();
 
             if (config.persistenceProvider == null)
-                throw new ConfigException("Superbus needs a persistence provider");
+                config.persistenceProvider = new CommandPersistenceProvider(
+                    new LocalDatabaseFactory(context)
+                );
 
             PersistedTaskQueueConfig retConfig = config;
             config = null;
@@ -93,4 +101,21 @@ public class PersistedTaskQueueConfig
     {
         return persistenceProvider;
     }
+
+    private static final class LocalDatabaseFactory implements SQLiteDatabaseFactory
+    {
+        private ClearSQLiteDatabase sqLiteDatabase;
+
+        private LocalDatabaseFactory(Context context)
+        {
+            sqLiteDatabase = new ClearSQLiteDatabase(SimpleDatabaseHelper.getInstance(context, PERSISTED_QUEUE).getWritableDatabase());
+        }
+
+        @Override
+        public SQLiteDatabaseIntf getDatabase()
+        {
+            return sqLiteDatabase;
+        }
+    }
+
 }

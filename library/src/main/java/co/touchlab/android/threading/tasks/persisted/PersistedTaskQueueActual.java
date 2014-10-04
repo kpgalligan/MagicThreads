@@ -134,7 +134,7 @@ public class PersistedTaskQueueActual
         public void run()
         {
             UiThreadContext.assertBackgroundThread();
-            
+
             provider.saveCommand(task);
             handler.post(new FlipQueuesRunnable(task));
         }
