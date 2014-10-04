@@ -23,7 +23,6 @@ public class PersistedTaskQueueActual
     private final PostExeRunnable postExeRunnable = new PostExeRunnable();
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private Queue<Command> pendingTasks = new LinkedList<Command>();
-//    private Queue<Command> tasks = new LinkedList<Command>();
 
     private PriorityQueue<Command> commandQueue;
 
@@ -37,6 +36,8 @@ public class PersistedTaskQueueActual
 
     public PersistedTaskQueueActual(Application appContext, PersistedTaskQueueConfig config)
     {
+        UiThreadContext.assertUiThread();
+
         handler = new Handler(Looper.getMainLooper());
         this.appContext = appContext;
         this.config = config;
@@ -85,12 +86,24 @@ public class PersistedTaskQueueActual
     {
         boolean duplicate = false;
 
-        for (Command command : commandQueue)
+        for (Command command : pendingTasks)
         {
             if (c.same(command))
             {
                 duplicate = true;
                 break;
+            }
+        }
+
+        if(duplicate)
+        {
+            for (Command command : commandQueue)
+            {
+                if (c.same(command))
+                {
+                    duplicate = true;
+                    break;
+                }
             }
         }
         return duplicate;
@@ -101,6 +114,8 @@ public class PersistedTaskQueueActual
         @Override
         public void run()
         {
+            UiThreadContext.assertBackgroundThread();
+
             Collection<Command> commands = provider.loadPersistedCommands();
             commandQueue = new PriorityQueue<Command>(commands);
         }
@@ -118,9 +133,29 @@ public class PersistedTaskQueueActual
         @Override
         public void run()
         {
+            UiThreadContext.assertBackgroundThread();
+            
             provider.saveCommand(task);
+            handler.post(new FlipQueuesRunnable(task));
+        }
+    }
+
+    private class FlipQueuesRunnable implements Runnable
+    {
+        private Command task;
+
+        private FlipQueuesRunnable(Command task)
+        {
+            this.task = task;
+        }
+
+        @Override
+        public void run()
+        {
+            UiThreadContext.assertUiThread();
+
             pendingTasks.remove(task);
-            tasks.add(task);
+            commandQueue.add(task);
             resetPollRunnable();
         }
     }
@@ -140,7 +175,7 @@ public class PersistedTaskQueueActual
 
             logQueueState();
 
-            Command command = tasks.poll();
+            Command command = commandQueue.poll();
             if (command != null)
             {
                 currentTask = command;
@@ -256,7 +291,7 @@ public class PersistedTaskQueueActual
         public void run()
         {
             UiThreadContext.assertUiThread();
-            tasks.add(command);
+            commandQueue.add(command);
         }
     }
 
@@ -318,7 +353,7 @@ public class PersistedTaskQueueActual
             queueQuery.query(pendingTask);
         }
 
-        for (Command task : tasks)
+        for (Command task : commandQueue)
         {
             queueQuery.query(task);
         }
