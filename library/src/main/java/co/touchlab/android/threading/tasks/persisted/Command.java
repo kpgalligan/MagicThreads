@@ -41,23 +41,14 @@ public abstract class Command implements Comparable<Command>
     private long added = System.currentTimeMillis();
     private int transientExceptionCount = 0;
 
-    private transient boolean commandRunning = false;
-
-    public boolean isCommandRunning()
-    {
-        return commandRunning;
-    }
-
-    public void setCommandRunning(boolean commandRunning)
-    {
-        this.commandRunning = commandRunning;
-    }
-
     /**
      * This is for your benefit.  Command info will be logged during various events.
      * @return String representation of the command.  Human readable.  Bus doesn't care what this is, but keep in mind common sense performance considerations.
      */
-    public abstract String logSummary();
+    public String logSummary()
+    {
+        return getClass().getSimpleName();
+    }
 
     /**
      * This is like Java equals, but could be more relaxed.  Used to test existing commands and exclude adding a new one.
@@ -68,7 +59,10 @@ public abstract class Command implements Comparable<Command>
      * @param command Command to test for "same-ness"
      * @return true if passed command is the same as this one.  False if not, or if the command should always run.
      */
-    public abstract boolean same(Command command);
+    public boolean same(Command command)
+    {
+        return false;
+    }
 
     /**
      * This is where your logic goes.  You must be very careful with how you handle error conditions.
@@ -102,7 +96,7 @@ public abstract class Command implements Comparable<Command>
      * @throws co.touchlab.android.threading.errorcontrol.SoftException
      * @throws java.lang.Throwable
      */
-    public abstract void callCommand(Context context) throws SoftException, Throwable;
+    public abstract void run(Context context) throws SoftException, Throwable;
 
     /**
      * There was a transient problem with this command.  Its being put back on the queue.
@@ -122,13 +116,17 @@ public abstract class Command implements Comparable<Command>
      */
     public void onPermanentError(Context context, Throwable exception)
     {
-
+        boolean handled = handlePermanentError(context, exception);
+        if(!handled)
+            throw new SuperbusProcessException(exception);
     }
+
+    public abstract boolean handlePermanentError(Context context, Throwable exception);
 
     /**
      * Success!  Your command processed.
      */
-    public void onSuccess(Context context)
+    public void onComplete(Context context)
     {
 
     }

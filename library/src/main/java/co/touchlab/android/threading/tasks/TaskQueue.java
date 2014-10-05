@@ -39,7 +39,7 @@ public class TaskQueue
          * Post result to EventBus (or whatever).  This will happen after all queue orchestration is
          * complete.
          */
-        protected void onComplete()
+        protected void onComplete(Context context)
         {
 
         }
