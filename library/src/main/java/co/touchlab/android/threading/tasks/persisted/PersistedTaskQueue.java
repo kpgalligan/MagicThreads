@@ -16,32 +16,32 @@ import java.util.concurrent.Executors;
 /**
  * Created by kgalligan on 9/28/14.
  */
-public class PersistedTaskQueueActual
+public class PersistedTaskQueue
 {
+    public static final String TAG = PersistedTaskQueue.class.getSimpleName();
+
     private final Handler handler;
     private final PollRunnable pollRunnable = new PollRunnable();
-    private final PostExeRunnable postExeRunnable = new PostExeRunnable();
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private Queue<Command> pendingTasks = new LinkedList<Command>();
 
-    private PriorityQueue<Command> commandQueue;
+    private PriorityQueue<Command> commandQueue = new PriorityQueue<Command>();
 
     private Command currentTask;
 
-    public static final String TAG = PersistedTaskQueueActual.class.getSimpleName();
     private PersistenceProvider provider;
     private Application appContext;
-    private PersistedTaskQueueConfig config;
+    private CommandPurgePolicy commandPurgePolicy;
     private BusLog log;
 
-    public PersistedTaskQueueActual(Application appContext, PersistedTaskQueueConfig config)
+    public PersistedTaskQueue(Application appContext, PersistedTaskQueueConfig config)
     {
         UiThreadContext.assertUiThread();
 
         handler = new Handler(Looper.getMainLooper());
         this.appContext = appContext;
-        this.config = config;
         provider = config.getPersistenceProvider();
+        commandPurgePolicy = config.commandPurgePolicy;
         log = config.getLog();
         runInBackground(new LoadAllRunnable());
     }
@@ -53,15 +53,17 @@ public class PersistedTaskQueueActual
      */
     public void execute(final Command task)
     {
-        if(UiThreadContext.isInUiThread())
+        if (UiThreadContext.isInUiThread())
         {
             callExecute(task);
         }
         else
         {
-            handler.post(new Runnable() {
+            handler.post(new Runnable()
+            {
                 @Override
-                public void run() {
+                public void run()
+                {
                     callExecute(task);
                 }
             });
@@ -95,7 +97,7 @@ public class PersistedTaskQueueActual
             }
         }
 
-        if(duplicate)
+        if (duplicate)
         {
             for (Command command : commandQueue)
             {
@@ -117,7 +119,9 @@ public class PersistedTaskQueueActual
             UiThreadContext.assertBackgroundThread();
 
             Collection<Command> commands = provider.loadPersistedCommands();
-            commandQueue = new PriorityQueue<Command>(commands);
+            //This touches the queue in the background thread, but should always happen
+            //before main thread ops.
+            commandQueue.addAll(commands);
         }
     }
 
@@ -173,6 +177,9 @@ public class PersistedTaskQueueActual
         {
             UiThreadContext.assertUiThread();
 
+            if (currentTask != null)
+                return;
+
             logQueueState();
 
             Command command = commandQueue.poll();
@@ -208,63 +215,82 @@ public class PersistedTaskQueueActual
 
             try
             {
-                try
-                {
-                    callCommand(c);
-                    cause = null;
-                    commandResult = CommandResult.Success;
-                }
-                catch (SoftException e)
-                {
-                    cause = e;
+                callCommand(c);
+                cause = null;
+                commandResult = CommandResult.Success;
+            }
+            catch (SoftException e)
+            {
+                cause = e;
 
-                    boolean purge = config.commandPurgePolicy.purgeCommandOnTransientException(c, e);
+                boolean purge = commandPurgePolicy.purgeCommandOnTransientException(c, e);
 
-                    if (purge)
-                    {
-                        log.w(TAG, "Purging command on TransientException: {" + c.logSummary() + "}");
-                        commandResult = CommandResult.Permanent;
-                    }
-                    else
-                    {
-                        commandResult = CommandResult.Transient;
-                    }
-                }
-                catch (Throwable e)
+                if (purge)
                 {
-                    cause = e;
+                    log.w(TAG, "Purging command on TransientException: {" + c.logSummary() + "}");
                     commandResult = CommandResult.Permanent;
                 }
-
-                if(cause != null)
-                    log.e(TAG, null, cause);
-
-                //Deal with status
-                switch (commandResult)
+                else
                 {
-                    case Success:
-                        provider.removeCommand(c);
-                        c.onSuccess(appContext);
-                        break;
-
-                    case Transient:
-                        c.setTransientExceptionCount(c.getTransientExceptionCount() + 1);//TODO: This will never be persisted.  Could be an issue.
-                        logTransientException(c, cause);
-                        handler.post(new RepostCommandRunnable(c));
-                        break;
-
-                    case Permanent:
-                        provider.removeCommand(c);
-                        logPermanentException(c, cause);
-                        break;
-
-                    default:
-                        throw new SuperbusProcessException("Unknown status");
+                    commandResult = CommandResult.Transient;
                 }
             }
-            finally
+            catch (Throwable e)
             {
-                handler.post(postExeRunnable);
+                cause = e;
+                commandResult = CommandResult.Permanent;
+            }
+
+            if (cause != null)
+                log.e(TAG, null, cause);
+
+            if (commandResult == CommandResult.Success || commandResult == CommandResult.Permanent)
+            {
+                provider.removeCommand(c);
+            }
+            //TODO: increment transient count
+            handler.post(new FinishTaskRunnable(c, commandResult, cause));
+
+        }
+    }
+
+    private class FinishTaskRunnable implements Runnable
+    {
+        private Command c;
+        private CommandResult commandResult;
+        private Throwable cause;
+
+        private FinishTaskRunnable(Command c, CommandResult commandResult, Throwable cause)
+        {
+            this.c = c;
+            this.commandResult = commandResult;
+            this.cause = cause;
+        }
+
+        @Override
+        public void run()
+        {
+            currentTask = null;
+
+            switch (commandResult)
+            {
+                case Success:
+                    c.onSuccess(appContext);
+                    resetPollRunnable();
+                    break;
+
+                case Transient:
+                    logTransientException(c, cause);
+                    commandQueue.add(c);
+                    break;
+
+                case Permanent:
+                    logPermanentException(c, cause);
+                    resetPollRunnable();
+                    break;
+
+                default:
+                    throw new SuperbusProcessException("Unknown status");
             }
         }
     }
@@ -276,46 +302,6 @@ public class PersistedTaskQueueActual
         command.callCommand(appContext);
 
         logCommandVerbose(command, "callComand-finish");
-    }
-
-    private class RepostCommandRunnable implements Runnable
-    {
-        Command command;
-
-        private RepostCommandRunnable(Command command)
-        {
-            this.command = command;
-        }
-
-        @Override
-        public void run()
-        {
-            UiThreadContext.assertUiThread();
-            commandQueue.add(command);
-        }
-    }
-
-    private class PostExeRunnable implements Runnable
-    {
-        @Override
-        public void run()
-        {
-            UiThreadContext.assertUiThread();
-
-            try
-            {
-                if(currentTask != null)
-                {
-                    Command task = currentTask;
-                    currentTask = null;
-                    task.onSuccess(appContext);
-                }
-            }
-            finally
-            {
-                resetPollRunnable();
-            }
-        }
     }
 
     private class ThrowRunnable implements Runnable
@@ -330,10 +316,10 @@ public class PersistedTaskQueueActual
         @Override
         public void run()
         {
-            if(cause instanceof RuntimeException)
-                throw (RuntimeException)cause;
-            else if(cause instanceof Error)
-                throw (Error)cause;
+            if (cause instanceof RuntimeException)
+                throw (RuntimeException) cause;
+            else if (cause instanceof Error)
+                throw (Error) cause;
             else
                 throw new RuntimeException(cause);
         }
@@ -358,7 +344,7 @@ public class PersistedTaskQueueActual
             queueQuery.query(task);
         }
 
-        if(currentTask != null)
+        if (currentTask != null)
             queueQuery.query(currentTask);
     }
 

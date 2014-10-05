@@ -1,14 +1,11 @@
 package co.touchlab.android.threading.tasks.persisted;
 
 import android.content.ContentValues;
-import android.content.Context;
-import android.util.Log;
 import co.touchlab.android.threading.tasks.persisted.storage.StoredCommandAdapter;
 import co.touchlab.android.threading.tasks.persisted.storage.gson.GsonStoredCommandAdapter;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.CursorIntf;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseFactory;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseIntf;
-import co.touchlab.android.threading.utils.UiThreadContext;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
@@ -55,7 +52,7 @@ public class CommandPersistenceProvider implements PersistenceProvider
         {
             int removedCount = databaseFactory.getDatabase().delete(TABLE_NAME, "id = ?", new String[]{command.getId().toString()});
             if(removedCount != 1)
-                log.e(PersistedTaskQueueActual.TAG, "Deleted count != 1, was "+ removedCount);
+                log.e(PersistedTaskQueue.TAG, "Deleted count != 1, was "+ removedCount);
         }
         catch (Exception e)
         {
@@ -210,7 +207,7 @@ public class CommandPersistenceProvider implements PersistenceProvider
         {
             if(e instanceof ClassNotFoundException)
             {
-                log.e(PersistedTaskQueueActual.TAG, "Class cast on load. Nothing to do here. Be more careful.", e);
+                log.e(PersistedTaskQueue.TAG, "Class cast on load. Nothing to do here. Be more careful.", e);
                 return null;
             }
             else if(e instanceof SuperbusProcessException)
