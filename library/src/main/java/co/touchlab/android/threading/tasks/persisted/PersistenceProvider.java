@@ -14,5 +14,6 @@ public interface PersistenceProvider
     void removeCommand(Command command) throws SuperbusProcessException;
     void saveCommand(Command command)throws SuperbusProcessException;
     Collection<Command> loadPersistedCommands()throws SuperbusProcessException;
+    void clearPersistedCommands()throws SuperbusProcessException;
     void runInTransaction(Runnable r);
 }

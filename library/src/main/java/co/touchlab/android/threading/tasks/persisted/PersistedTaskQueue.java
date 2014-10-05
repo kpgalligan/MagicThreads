@@ -6,12 +6,10 @@ import android.os.Looper;
 import co.touchlab.android.threading.errorcontrol.SoftException;
 import co.touchlab.android.threading.utils.UiThreadContext;
 
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.PriorityQueue;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by kgalligan on 9/28/14.
@@ -70,6 +68,85 @@ public class PersistedTaskQueue
         }
     }
 
+    /**
+     * For testing purposes only.  Don't call this.  Stops queue and returns state for us to check out in test cases.
+     * Would need to make sure we get back into a runnable state for this to work properly as a useful method.  Multithreading is hard.
+     *
+     * @return
+     */
+    public PersistedTaskQueueState clearQueue()
+    {
+        UiThreadContext.assertUiThread();
+
+        executorService.execute(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                provider.clearPersistedCommands();
+            }
+        });
+        executorService.shutdown();
+        try
+        {
+            executorService.awaitTermination(30, TimeUnit.SECONDS);
+        }
+        catch (InterruptedException e)
+        {
+            log.e(TAG, "Wait interrupted", e);
+        }
+
+        PersistedTaskQueueState state = new PersistedTaskQueueState(new ArrayList<Command>(pendingTasks), new ArrayList<Command>(commandQueue), currentTask);
+
+        pendingTasks.clear();
+        commandQueue.clear();
+        currentTask = null;
+
+        handler.removeCallbacksAndMessages(null);
+
+        return state;
+    }
+
+    /**
+     * Added for testing, but you can use this as long as you're careful.  Somebody will blow up their app by editing the commands, but
+     * I told you not to, so that's your problem.
+     *
+     * @return
+     */
+    public PersistedTaskQueueState copyState()
+    {
+        return new PersistedTaskQueueState(new ArrayList<Command>(pendingTasks), new ArrayList<Command>(commandQueue), currentTask);
+    }
+
+    public static class PersistedTaskQueueState
+    {
+        List<Command> pending;
+        List<Command> queued;
+        Command currentTask;
+
+        public PersistedTaskQueueState(List<Command> pending, List<Command> queued, Command currentTask)
+        {
+            this.pending = pending;
+            this.queued = queued;
+            this.currentTask = currentTask;
+        }
+
+        public List<Command> getPending()
+        {
+            return pending;
+        }
+
+        public List<Command> getQueued()
+        {
+            return queued;
+        }
+
+        public Command getCurrentTask()
+        {
+            return currentTask;
+        }
+    }
+
     private void callExecute(Command task)
     {
         UiThreadContext.assertUiThread();
@@ -122,6 +199,8 @@ public class PersistedTaskQueue
             //This touches the queue in the background thread, but should always happen
             //before main thread ops.
             commandQueue.addAll(commands);
+
+            resetPollRunnable();
         }
     }
 
@@ -168,6 +247,11 @@ public class PersistedTaskQueue
     {
         handler.removeCallbacks(pollRunnable);
         handler.post(pollRunnable);
+    }
+
+    public void restartQueue()
+    {
+        resetPollRunnable();
     }
 
     private class PollRunnable implements Runnable
@@ -247,6 +331,10 @@ public class PersistedTaskQueue
             if (commandResult == CommandResult.Success || commandResult == CommandResult.Permanent)
             {
                 provider.removeCommand(c);
+            }
+            else
+            {
+                provider.saveCommand(c);
             }
             //TODO: increment transient count
             handler.post(new FinishTaskRunnable(c, commandResult, cause));

@@ -73,11 +73,18 @@ public class CommandPersistenceProvider implements PersistenceProvider
         {
             ContentValues values = prepCommandSave(command);
 
-            long newRowId = databaseFactory.getDatabase().insertOrThrow(
-                    TABLE_NAME, "type", values
-            );
+            if(command.getId() == null)
+            {
+                long newRowId = databaseFactory.getDatabase().insertOrThrow(
+                        TABLE_NAME, "type", values
+                );
 
-            command.setId(newRowId);
+                command.setId(newRowId);
+            }
+            else
+            {
+                databaseFactory.getDatabase().update(TABLE_NAME, values, "id = ?", new String[]{command.getId().toString()});
+            }
         }
         catch (SuperbusProcessException e)
         {
@@ -132,6 +139,22 @@ public class CommandPersistenceProvider implements PersistenceProvider
         catch (Exception e)
         {
             throw new SuperbusProcessException(e);
+        }
+    }
+
+    @Override
+    public void clearPersistedCommands() throws SuperbusProcessException
+    {
+        try
+        {
+            databaseFactory.getDatabase().delete(TABLE_NAME, null, null);
+        }
+        catch (Exception e)
+        {
+            if(e instanceof SuperbusProcessException)
+                throw (SuperbusProcessException)e;
+            else
+                throw new SuperbusProcessException(e);
         }
     }
 
