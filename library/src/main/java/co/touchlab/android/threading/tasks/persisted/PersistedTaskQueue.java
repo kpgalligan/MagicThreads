@@ -156,10 +156,18 @@ public class PersistedTaskQueue
         {
             UiThreadContext.assertBackgroundThread();
 
-            Collection<Command> commands = provider.loadPersistedCommands();
-            //This touches the queue in the background thread, but should always happen
-            //before main thread ops.
-            commandQueue.addAll(commands);
+            final Collection<Command> commands = provider.loadPersistedCommands();
+
+            //TODO: Checking 'same' on tasks added while loading from db may incorrectly return false and
+            //add duplicate tasks.  To be complete, we should figure this out, but its a pretty minor issue
+            handler.post(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    commandQueue.addAll(commands);
+                }
+            });
 
             resetPollRunnable();
         }
@@ -302,6 +310,8 @@ public class PersistedTaskQueue
         @Override
         public void run()
         {
+            UiThreadContext.assertUiThread();
+
             currentTask = null;
 
             switch (commandResult)
