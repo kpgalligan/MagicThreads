@@ -9,7 +9,6 @@ import co.touchlab.android.threading.utils.UiThreadContext;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by kgalligan on 9/28/14.
@@ -20,6 +19,8 @@ public class PersistedTaskQueue
 
     private final Handler handler;
     private final PollRunnable pollRunnable = new PollRunnable();
+    private final PersistAllPendingRunnable persistAllPendingRunnable = new PersistAllPendingRunnable();
+
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private Queue<Command> pendingTasks = new LinkedList<Command>();
 
@@ -69,45 +70,6 @@ public class PersistedTaskQueue
     }
 
     /**
-     * For testing purposes only.  Don't call this.  Stops queue and returns state for us to check out in test cases.
-     * Would need to make sure we get back into a runnable state for this to work properly as a useful method.  Multithreading is hard.
-     *
-     * @return
-     */
-    public PersistedTaskQueueState clearQueue()
-    {
-        UiThreadContext.assertUiThread();
-
-        executorService.execute(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                provider.clearPersistedCommands();
-            }
-        });
-        executorService.shutdown();
-        try
-        {
-            executorService.awaitTermination(30, TimeUnit.SECONDS);
-        }
-        catch (InterruptedException e)
-        {
-            log.e(TAG, "Wait interrupted", e);
-        }
-
-        PersistedTaskQueueState state = copyState();
-
-        pendingTasks.clear();
-        commandQueue.clear();
-        currentTask = null;
-
-        handler.removeCallbacksAndMessages(null);
-
-        return state;
-    }
-
-    /**
      * Added for testing, but you can use this as long as you're careful.  Somebody will blow up their app by editing the commands, but
      * I told you not to, so that's your problem.
      *
@@ -115,6 +77,8 @@ public class PersistedTaskQueue
      */
     public PersistedTaskQueueState copyState()
     {
+        UiThreadContext.assertUiThread();
+
         PriorityQueue<Command> commands = new PriorityQueue<Command>(commandQueue);
         List<Command> commandList = new ArrayList<Command>();
         while (!commands.isEmpty())
@@ -122,35 +86,6 @@ public class PersistedTaskQueue
             commandList.add(commands.poll());
         }
         return new PersistedTaskQueueState(new ArrayList<Command>(pendingTasks), commandList, currentTask);
-    }
-
-    public static class PersistedTaskQueueState
-    {
-        List<Command> pending;
-        List<Command> queued;
-        Command currentTask;
-
-        public PersistedTaskQueueState(List<Command> pending, List<Command> queued, Command currentTask)
-        {
-            this.pending = pending;
-            this.queued = queued;
-            this.currentTask = currentTask;
-        }
-
-        public List<Command> getPending()
-        {
-            return pending;
-        }
-
-        public List<Command> getQueued()
-        {
-            return queued;
-        }
-
-        public Command getCurrentTask()
-        {
-            return currentTask;
-        }
     }
 
     private void callExecute(Command task)
@@ -164,11 +99,31 @@ public class PersistedTaskQueue
 
         pendingTasks.add(task);
 
-        runInBackground(new PersistTaskRunnable(task));
+        handler.removeCallbacks(persistAllPendingRunnable);
+        handler.post(persistAllPendingRunnable);
+    }
+
+    //Run once, at the end of a batch
+    private class PersistAllPendingRunnable implements Runnable
+    {
+        @Override
+        public void run()
+        {
+            UiThreadContext.assertUiThread();
+            List<Command> copyPendingTasks = new ArrayList<Command>(pendingTasks);
+            pendingTasks.clear();
+            runInBackground(new PersistTasksRunnable(copyPendingTasks));
+            for (Command copyPendingTask : copyPendingTasks)
+            {
+                commandQueue.offer(copyPendingTask);
+            }
+        }
     }
 
     private boolean checkHasDuplicate(Command c)
     {
+        UiThreadContext.assertUiThread();
+
         boolean duplicate = false;
 
         for (Command command : pendingTasks)
@@ -210,42 +165,25 @@ public class PersistedTaskQueue
         }
     }
 
-    private class PersistTaskRunnable implements Runnable
+    private class PersistTasksRunnable implements Runnable
     {
-        private Command task;
+        private List<Command> tasks;
 
-        private PersistTaskRunnable(Command task)
+        private PersistTasksRunnable(List<Command> tasks)
         {
-            this.task = task;
+            this.tasks = tasks;
         }
 
         @Override
         public void run()
         {
+            long start = System.currentTimeMillis();
+            log.d(TAG, "PersistTasksRunnable - start");
             UiThreadContext.assertBackgroundThread();
 
-            provider.saveCommand(task);
-            handler.post(new FlipQueuesRunnable(task));
-        }
-    }
-
-    private class FlipQueuesRunnable implements Runnable
-    {
-        private Command task;
-
-        private FlipQueuesRunnable(Command task)
-        {
-            this.task = task;
-        }
-
-        @Override
-        public void run()
-        {
-            UiThreadContext.assertUiThread();
-
-            pendingTasks.remove(task);
-            commandQueue.add(task);
+            provider.saveCommandBatch(tasks);
             resetPollRunnable();
+            log.d(TAG, "PersistTasksRunnable - end - " + (System.currentTimeMillis() - start));
         }
     }
 
@@ -483,4 +421,32 @@ public class PersistedTaskQueue
         executorService.execute(r);
     }
 
+    public static class PersistedTaskQueueState
+    {
+        List<Command> pending;
+        List<Command> queued;
+        Command currentTask;
+
+        public PersistedTaskQueueState(List<Command> pending, List<Command> queued, Command currentTask)
+        {
+            this.pending = pending;
+            this.queued = queued;
+            this.currentTask = currentTask;
+        }
+
+        public List<Command> getPending()
+        {
+            return pending;
+        }
+
+        public List<Command> getQueued()
+        {
+            return queued;
+        }
+
+        public Command getCurrentTask()
+        {
+            return currentTask;
+        }
+    }
 }

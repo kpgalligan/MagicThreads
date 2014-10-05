@@ -97,6 +97,25 @@ public class CommandPersistenceProvider implements PersistenceProvider
     }
 
     @Override
+    public void saveCommandBatch(Collection<Command> commands) throws SuperbusProcessException
+    {
+        SQLiteDatabaseIntf database = databaseFactory.getDatabase();
+        try
+        {
+            database.beginTransaction();
+            for (Command command : commands)
+            {
+                saveCommand(command);
+            }
+            database.setTransactionSuccessful();
+        }
+        finally
+        {
+            database.endTransaction();
+        }
+    }
+
+    @Override
     public Collection<Command> loadPersistedCommands()throws SuperbusProcessException
     {
         try

@@ -15,13 +15,13 @@ import com.google.gson.Gson;
  */
 public class GsonStoredCommandAdapter implements StoredCommandAdapter
 {
+    Gson gson = new Gson();
     @Override
     public Command inflateCommand(String data, String className) throws SuperbusProcessException, ClassNotFoundException
     {
         try
         {
-            Log.w("GSON_OUT", "class: "+ className +"/data: "+ data);
-            Object returnedCommand = new Gson().fromJson(data, Class.forName(className));
+            Object returnedCommand = gson.fromJson(data, Class.forName(className));
             return (Command) returnedCommand;
         }
         catch (ClassNotFoundException e)
@@ -39,9 +39,7 @@ public class GsonStoredCommandAdapter implements StoredCommandAdapter
     {
         try
         {
-            String s = new Gson().toJson(command, command.getClass());
-            Log.w("GSON_OUT", s);
-            return s;
+            return gson.toJson(command, command.getClass());
         }
         catch (Exception e)
         {
