@@ -1,6 +1,5 @@
 package co.touchlab.android.threading.tasks.persisted.storage.gson;
 
-import android.util.Log;
 import co.touchlab.android.threading.tasks.persisted.Command;
 import co.touchlab.android.threading.tasks.persisted.SuperbusProcessException;
 import co.touchlab.android.threading.tasks.persisted.storage.StoredCommandAdapter;
@@ -15,12 +14,14 @@ import com.google.gson.Gson;
  */
 public class GsonStoredCommandAdapter implements StoredCommandAdapter
 {
-    Gson gson = new Gson();
+    ThreadLocal<Gson> gsonThreadLocal = new ThreadLocal<Gson>();
+
     @Override
     public Command inflateCommand(String data, String className) throws SuperbusProcessException, ClassNotFoundException
     {
         try
         {
+            Gson gson = gsonForThread();
             Object returnedCommand = gson.fromJson(data, Class.forName(className));
             return (Command) returnedCommand;
         }
@@ -34,12 +35,23 @@ public class GsonStoredCommandAdapter implements StoredCommandAdapter
         }
     }
 
+    private Gson gsonForThread()
+    {
+        Gson gson = gsonThreadLocal.get();
+        if(gson == null)
+        {
+            gson = new Gson();
+            gsonThreadLocal.set(gson);
+        }
+        return gson;
+    }
+
     @Override
     public String storeCommand(Command command) throws SuperbusProcessException
     {
         try
         {
-            return gson.toJson(command, command.getClass());
+            return gsonForThread().toJson(command, command.getClass());
         }
         catch (Exception e)
         {
