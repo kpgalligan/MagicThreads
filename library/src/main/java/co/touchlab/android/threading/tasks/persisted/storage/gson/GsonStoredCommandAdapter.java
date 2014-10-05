@@ -1,5 +1,6 @@
 package co.touchlab.android.threading.tasks.persisted.storage.gson;
 
+import android.util.Log;
 import co.touchlab.android.threading.tasks.persisted.Command;
 import co.touchlab.android.threading.tasks.persisted.SuperbusProcessException;
 import co.touchlab.android.threading.tasks.persisted.storage.StoredCommandAdapter;
@@ -19,6 +20,7 @@ public class GsonStoredCommandAdapter implements StoredCommandAdapter
     {
         try
         {
+            Log.w("GSON_OUT", "class: "+ className +"/data: "+ data);
             Object returnedCommand = new Gson().fromJson(data, Class.forName(className));
             return (Command) returnedCommand;
         }
@@ -37,7 +39,9 @@ public class GsonStoredCommandAdapter implements StoredCommandAdapter
     {
         try
         {
-            return new Gson().toJson(command, command.getClass());
+            String s = new Gson().toJson(command, command.getClass());
+            Log.w("GSON_OUT", s);
+            return s;
         }
         catch (Exception e)
         {

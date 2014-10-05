@@ -96,7 +96,7 @@ public class PersistedTaskQueue
             log.e(TAG, "Wait interrupted", e);
         }
 
-        PersistedTaskQueueState state = new PersistedTaskQueueState(new ArrayList<Command>(pendingTasks), new ArrayList<Command>(commandQueue), currentTask);
+        PersistedTaskQueueState state = copyState();
 
         pendingTasks.clear();
         commandQueue.clear();
@@ -115,7 +115,13 @@ public class PersistedTaskQueue
      */
     public PersistedTaskQueueState copyState()
     {
-        return new PersistedTaskQueueState(new ArrayList<Command>(pendingTasks), new ArrayList<Command>(commandQueue), currentTask);
+        PriorityQueue<Command> commands = new PriorityQueue<Command>(commandQueue);
+        List<Command> commandList = new ArrayList<Command>();
+        while (!commands.isEmpty())
+        {
+            commandList.add(commands.poll());
+        }
+        return new PersistedTaskQueueState(new ArrayList<Command>(pendingTasks), commandList, currentTask);
     }
 
     public static class PersistedTaskQueueState
@@ -334,11 +340,11 @@ public class PersistedTaskQueue
             }
             else
             {
+                c.setTransientExceptionCount(c.getTransientExceptionCount() + 1);
                 provider.saveCommand(c);
             }
-            //TODO: increment transient count
-            handler.post(new FinishTaskRunnable(c, commandResult, cause));
 
+            handler.post(new FinishTaskRunnable(c, commandResult, cause));
         }
     }
 
@@ -363,7 +369,7 @@ public class PersistedTaskQueue
             switch (commandResult)
             {
                 case Success:
-                    c.onSuccess(appContext);
+                    c.onComplete(appContext);
                     resetPollRunnable();
                     break;
 
@@ -387,7 +393,7 @@ public class PersistedTaskQueue
     {
         logCommandVerbose(command, "callCommand-start");
 
-        command.callCommand(appContext);
+        command.run(appContext);
 
         logCommandVerbose(command, "callComand-finish");
     }

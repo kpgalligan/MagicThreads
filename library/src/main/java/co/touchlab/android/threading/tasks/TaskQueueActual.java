@@ -156,7 +156,7 @@ public class TaskQueueActual
                 {
                     Task task = currentTask;
                     currentTask = null;
-                    task.onComplete();
+                    task.onComplete(application);
                 }
             }
             finally

@@ -4,6 +4,7 @@ import android.content.Context;
 import co.touchlab.android.threading.errorcontrol.SoftException;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Abstract class to wrap the operation you want to run.
@@ -34,11 +35,17 @@ public abstract class Command implements Comparable<Command>
     public static final int HIGHER_PRIORITY = 15;
     public static final int MUCH_HIGHER_PRIORITY = 20;
 
+    private static AtomicInteger orderTieCounter = new AtomicInteger(0);
+
     //Init with current time. Allow override by accessors
     private long lastUpdate = System.currentTimeMillis();
 
     private int priority = DEFAULT_PRIORITY;
     private long added = System.currentTimeMillis();
+
+    //Current time stamp may be the same if several commands added quickly. This will break tie.
+    private int orderTie = orderTieCounter.getAndAdd(1);
+
     private int transientExceptionCount = 0;
 
     /**
@@ -203,6 +210,16 @@ public abstract class Command implements Comparable<Command>
         this.added = added;
     }
 
+    public int getOrderTie()
+    {
+        return orderTie;
+    }
+
+    public void setOrderTie(int orderTie)
+    {
+        this.orderTie = orderTie;
+    }
+
     public int getTransientExceptionCount()
     {
         return transientExceptionCount;
@@ -213,6 +230,7 @@ public abstract class Command implements Comparable<Command>
         this.transientExceptionCount = transientExceptionCount;
     }
 
+    @Override
     public int compareTo(Command command)
     {
         int priorityCompare = command.getPriority() - priority;
@@ -220,7 +238,11 @@ public abstract class Command implements Comparable<Command>
         {
             return priorityCompare;
         }
-        return (int)(added - command.getAdded());
+        int addedCompare = (int) (added - command.getAdded());
+        if(addedCompare != 0)
+            return addedCompare;
+
+        return orderTie - command.orderTie;
     }
 
     private Long id;
