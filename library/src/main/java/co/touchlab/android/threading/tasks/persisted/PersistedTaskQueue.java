@@ -9,6 +9,7 @@ import co.touchlab.android.threading.utils.UiThreadContext;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * Created by kgalligan on 9/28/14.
@@ -21,7 +22,14 @@ public class PersistedTaskQueue
     private final PollRunnable pollRunnable = new PollRunnable();
     private final PersistAllPendingRunnable persistAllPendingRunnable = new PersistAllPendingRunnable();
 
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor(new ThreadFactory()
+    {
+        @Override
+        public Thread newThread(Runnable r)
+        {
+            return new Thread(r);
+        }
+    });
     private Queue<Command> pendingTasks = new LinkedList<Command>();
 
     private PriorityQueue<Command> commandQueue = new PriorityQueue<Command>();
@@ -426,9 +434,34 @@ public class PersistedTaskQueue
         c.onPermanentError(appContext, e);
     }
 
-    private void runInBackground(Runnable r)
+    private void runInBackground(final Runnable r)
     {
-        executorService.execute(r);
+        executorService.execute(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    r.run();
+                }
+                catch (Throwable e)
+                {
+                    if(e instanceof RuntimeException)
+                    {
+                        throw (RuntimeException)e;
+                    }
+                    else if(e instanceof Error)//TODO: Intellij says this is always true, but I think its wrong...
+                    {
+                        throw (Error)e;
+                    }
+                    else
+                    {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        });
     }
 
     public static class PersistedTaskQueueState
