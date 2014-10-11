@@ -112,10 +112,10 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
             }
         }
 
-        if (localData != null)
-        {
+//        if (localData != null)
+//        {
             callRegister();
-        }
+//        }
 
         return localData;
     }
