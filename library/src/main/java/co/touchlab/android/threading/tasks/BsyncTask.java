@@ -47,7 +47,7 @@ public abstract class BsyncTask<D> extends TaskQueue.Task
     }
 
     @Override
-    protected void onComplete()
+    protected void onComplete(Context context)
     {
         if(!cancel)
             EventBusExt.getDefault().post(this);

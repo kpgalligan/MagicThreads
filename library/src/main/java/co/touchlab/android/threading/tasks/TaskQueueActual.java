@@ -16,6 +16,7 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * Created by kgalligan on 7/28/14.
@@ -25,7 +26,14 @@ public class TaskQueueActual
     private final Handler handler;
     private final PollRunnable pollRunnable = new PollRunnable();
     private final PostExeRunnable postExeRunnable = new PostExeRunnable();
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor(new ThreadFactory()
+    {
+        @Override
+        public Thread newThread(Runnable r)
+        {
+            return new Thread(r);
+        }
+    });
     private Queue<Task> tasks = new LinkedList<Task>();
     private Task currentTask;
     private Application application;
@@ -156,7 +164,7 @@ public class TaskQueueActual
                 {
                     Task task = currentTask;
                     currentTask = null;
-                    task.onComplete();
+                    task.onComplete(application);
                 }
             }
             finally

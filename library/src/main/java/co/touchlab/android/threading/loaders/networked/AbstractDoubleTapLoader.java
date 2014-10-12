@@ -51,7 +51,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         }
 
         @Override
-        public boolean handleError(Throwable e)
+        protected boolean handleError(Throwable e)
         {
             return false;
         }
