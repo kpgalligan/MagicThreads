@@ -1,4 +1,7 @@
-package co.touchlab.android.threading.tasks;
+package co.touchlab.android.threading.tasks.utils;
+
+import co.touchlab.android.threading.tasks.TaskQueue;
+import co.touchlab.android.threading.tasks.TaskQueueActual;
 
 /**
  * Created by kgalligan on 9/13/14.

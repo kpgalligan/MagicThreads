@@ -43,8 +43,6 @@ public class PersistedTaskQueue
 
     public PersistedTaskQueue(Application appContext, PersistedTaskQueueConfig config)
     {
-        UiThreadContext.assertUiThread();
-
         handler = new Handler(Looper.getMainLooper());
         this.appContext = appContext;
         provider = config.getPersistenceProvider();
