@@ -23,27 +23,7 @@ public class TaskQueue
     private static Map<String, TaskQueueActual> queueMap = new HashMap<String, TaskQueueActual>();
     private static final String DEFAULT_QUEUE = "__DEFAULT";
 
-    public abstract static class Task
-    {
-        protected abstract void run(Context context) throws Exception;
 
-        /**
-         * Handle Exception that occurred during processing.  Return true if handled, false if not.  If not handled, app will throw and probably crash.
-         *
-         * @param e
-         * @return true if handled, false if not (which will throw it)
-         */
-        protected abstract boolean handleError(Throwable e);
-
-        /**
-         * Post result to EventBus (or whatever).  This will happen after all queue orchestration is
-         * complete.
-         */
-        protected void onComplete(Context context)
-        {
-
-        }
-    }
 
     /**
      * Get a direct reference to your queue.  Call on main thread.

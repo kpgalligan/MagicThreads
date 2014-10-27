@@ -4,18 +4,12 @@ import android.app.Application;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import co.touchlab.android.threading.tasks.TaskQueue.Task;
 import co.touchlab.android.threading.utils.UiThreadContext;
-import de.greenrobot.event.EventBus;
-import de.greenrobot.event.SubscriberExceptionEvent;
 
-import javax.swing.text.html.HTMLDocument;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -70,8 +64,9 @@ public class TaskQueueActual
     {
         UiThreadContext.assertUiThread();
 
-        //repeatedly assigning seems ugly, but should work.
-        application = (Application) context.getApplicationContext();
+        if(application == null)
+            application = (Application) context.getApplicationContext();
+        
         tasks.add(task);
 
         resetPollRunnable();
