@@ -1,12 +1,11 @@
 package co.touchlab.android.threading.loaders.networked;
 
 import android.content.Context;
+import co.touchlab.android.threading.eventbus.EventBusExt;
 import co.touchlab.android.threading.loaders.AbstractDataLoader;
-import co.touchlab.android.threading.tasks.BsyncTask;
-import co.touchlab.android.threading.tasks.BsyncTaskManager;
-
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import co.touchlab.android.threading.tasks.TaskQueue;
+import co.touchlab.android.threading.tasks.sticky.StickyTask;
+import co.touchlab.android.threading.tasks.sticky.StickyTaskManager;
 
 /**
  * Will check locally and trigger a remote call.  You are responsible for saving the remote response, such that on a future call, it will
@@ -19,22 +18,29 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<DoubleTapResult<D, E>>
 {
-    private BsyncTaskManager bsyncTaskManager;
+    private StickyTaskManager stickyTaskManager;
     private boolean remoteCalled;
     private boolean remoteReturned;
     private E remoteError;
+    private final TaskQueue loaderQueue;
 
     public AbstractDoubleTapLoader(Context context)
     {
         super(context);
-        bsyncTaskManager = new BsyncTaskManager(null);
-        bsyncTaskManager.register(this);
+        stickyTaskManager = new StickyTaskManager(null);
+        loaderQueue = TaskQueue.loadQueue("LOADER_QUEUE");
+        EventBusExt.getDefault().register(this);
     }
 
-    class RemoteDataTask extends BsyncTask<AbstractDoubleTapLoader<D, E>>
+    class StickyRemoteDataTask extends StickyTask
     {
+        protected StickyRemoteDataTask(StickyTaskManager taskManager)
+        {
+            super(taskManager);
+        }
+
         @Override
-        protected void doInBackground(Context context) throws Exception
+        protected void run(Context context) throws Exception
         {
             E theError = findRemoteContent();
             synchronized (AbstractDoubleTapLoader.this)
@@ -45,9 +51,9 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         }
 
         @Override
-        protected void onPostExecute(AbstractDoubleTapLoader<D, E> host)
+        protected void onComplete(Context context)
         {
-            host.onContentChanged();
+            EventBusExt.getDefault().post(this);
         }
 
         @Override
@@ -57,12 +63,20 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         }
     }
 
-
     @Override
     protected void onReleaseResources(DoubleTapResult<D, E> data)
     {
         super.onReleaseResources(data);
-        bsyncTaskManager.unregister();
+        EventBusExt.getDefault().unregister(this);
+    }
+
+    @SuppressWarnings("UnusedDeclaration")
+    public void onEventMainThread(StickyRemoteDataTask task)
+    {
+        if(stickyTaskManager.isTaskForMe(task))
+        {
+            onContentChanged();
+        }
     }
 
     @Override
@@ -71,7 +85,8 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         if (!remoteCalled)
         {
             remoteCalled = true;
-            bsyncTaskManager.post(getContext(), new RemoteDataTask());
+            StickyRemoteDataTask stickyRemoteDataTask = new StickyRemoteDataTask(stickyTaskManager);
+            loaderQueue.execute(getContext(), stickyRemoteDataTask);
         }
 
         D localContent = findLocalContent();

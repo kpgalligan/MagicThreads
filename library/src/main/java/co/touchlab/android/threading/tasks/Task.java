@@ -7,8 +7,6 @@ import android.content.Context;
  */
 public abstract class Task
 {
-    private long affinityId;
-
     protected abstract void run(Context context) throws Exception;
 
     /**

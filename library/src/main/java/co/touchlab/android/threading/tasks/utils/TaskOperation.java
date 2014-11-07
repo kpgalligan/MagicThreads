@@ -1,7 +1,7 @@
 package co.touchlab.android.threading.tasks.utils;
 
 import android.view.View;
-import co.touchlab.android.threading.tasks.TaskQueueActual;
+import co.touchlab.android.threading.tasks.TaskQueue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,7 +49,7 @@ public class TaskOperation
         }
     }
 
-    public void perform(TaskQueueActual queueActual)
+    public void perform(TaskQueue queueActual)
     {
         boolean found = TaskQueueHelper.hasTasksOfType(queueActual, matchClasses.toArray(new Class[matchClasses.size()]));
         for (ViewOperation viewOperation : viewOperations)

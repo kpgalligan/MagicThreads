@@ -1,8 +1,6 @@
 package co.touchlab.android.threading.tasks.persisted;
 
-import android.app.Notification;
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.ClearSQLiteDatabase;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseFactory;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseIntf;
