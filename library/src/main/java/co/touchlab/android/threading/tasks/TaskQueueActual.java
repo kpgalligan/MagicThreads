@@ -5,6 +5,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import co.touchlab.android.threading.utils.UiThreadContext;
+import co.touchlab.android.threading.tasks.TaskQueue.Task;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -85,11 +86,14 @@ public class TaskQueueActual
         {
             UiThreadContext.assertUiThread();
 
-            Task task = tasks.poll();
-            if (task != null)
+            if(currentTask == null)
             {
-                currentTask = task;
-                executorService.execute(new ExeTask(task));
+                Task task = tasks.poll();
+                if (task != null)
+                {
+                    currentTask = task;
+                    executorService.execute(new ExeTask(task));
+                }
             }
         }
     }
@@ -137,6 +141,8 @@ public class TaskQueueActual
         @Override
         public void run()
         {
+            currentTask = null;
+
             if(cause instanceof RuntimeException)
                 throw (RuntimeException)cause;
             else if(cause instanceof Error)
