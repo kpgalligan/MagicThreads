@@ -135,14 +135,14 @@ public class TaskQueue
         {
             UiThreadContext.assertUiThread();
 
-            if(currentTask == null)
+            if (currentTask != null)
+                return;
+
+            Task task = tasks.poll();
+            if (task != null)
             {
-                Task task = tasks.poll();
-                if (task != null)
-                {
-                    currentTask = task;
-                    executorService.execute(new ExeTask(task));
-                }
+                currentTask = task;
+                executorService.execute(new ExeTask(task));
             }
         }
     }
