@@ -21,7 +21,7 @@ import java.util.concurrent.ThreadFactory;
  * <p/>
  * Created by kgalligan on 7/5/14.
  */
-public class TaskQueue
+public class TaskQueue extends BaseTaskQueue
 {
     private static Map<String, TaskQueue> queueMap = new HashMap<String, TaskQueue>();
     private static final String DEFAULT_QUEUE = "__DEFAULT";
@@ -31,12 +31,12 @@ public class TaskQueue
      * @param name
      * @return
      */
-    public static synchronized TaskQueue loadQueue(String name)
+    public static synchronized TaskQueue loadQueue(Context context, String name)
     {
         TaskQueue taskQueueActual = queueMap.get(name);
         if(taskQueueActual == null)
         {
-            taskQueueActual = new TaskQueue();
+            taskQueueActual = new TaskQueue((Application)context.getApplicationContext());
             queueMap.put(name, taskQueueActual);
         }
 
@@ -47,151 +47,43 @@ public class TaskQueue
      * The default queue
      * @return
      */
-    public static TaskQueue loadQueueDefault()
+    public static TaskQueue loadQueueDefault(Context context)
     {
-        return loadQueue(DEFAULT_QUEUE);
-    }
-
-
-    /**
-     * Puts a task on the queue. Use for local ops. Faster responses.
-     *
-     * @param context
-     * @param task
-     */
-    public static void execute(Context context, String queue, Task task)
-    {
-        TaskQueue queueActual = loadQueue(queue);
-        queueActual.execute(context, task);
+        return loadQueue(context, DEFAULT_QUEUE);
     }
 
     //*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     //*~*~*~*~*~*~*~*~*~*~ PER INSTANCE *~*~*~*~*~*~*~*~*~*~*~*~*~
     //*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
-    private final Handler handler;
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor(new ThreadFactory()
-    {
-        @Override
-        public Thread newThread(Runnable r)
-        {
-            return new Thread(r);
-        }
-    });
-    private Queue<Task> tasks = new LinkedList<Task>();
-    private Task currentTask;
-    private Application application;
 
-    public TaskQueue()
+    public TaskQueue(Application application)
     {
-        handler = new QueueHandler(Looper.getMainLooper());
+        super(application);
     }
 
-    private class QueueHandler extends Handler
+    @Override
+    protected void runTask(Task task)
     {
-        static final int CALL_EXECUTE = 0;
-        static final int POLL_TASK = 1;
-        static final int POST_EXE = 2;
-        static final int THROW = 3;
-
-        private QueueHandler(Looper looper)
-        {
-            super(looper);
-        }
-
-        @Override
-        public void handleMessage(Message msg)
-        {
-            switch (msg.what)
-            {
-                case CALL_EXECUTE:
-                    CallExecutePackage executePackage = (CallExecutePackage) msg.obj;
-                    callExecute(executePackage.context, executePackage.task);
-                    break;
-                case POLL_TASK:
-                    if (currentTask != null)
-                        return;
-
-                    Task task = tasks.poll();
-                    if (task != null)
-                    {
-                        currentTask = task;
-                        executorService.execute(new ExeTask(task));
-                    }
-                    break;
-                case POST_EXE:
-                    try
-                    {
-                        if(currentTask != null)
-                        {
-                            Task tempTask = currentTask;
-                            currentTask = null;
-                            tempTask.onComplete(application);
-                        }
-                    }
-                    finally
-                    {
-                        resetPollRunnable();
-                    }
-                    break;
-                case THROW:
-                    Throwable cause = (Throwable)msg.obj;
-                    if(cause instanceof RuntimeException)
-                        throw (RuntimeException)cause;
-                    else if(cause instanceof Error)
-                        throw (Error)cause;
-                    else
-                        throw new RuntimeException(cause);
-            }
-        }
+        executorService.execute(new ExeTask(task));
     }
+
     /**
      * Puts a task on the queue.  Call on main thread only.
      *
-     * @param context
      * @param task
      */
-    public void execute(final Context context, final Task task)
+    public void execute(final Task task)
     {
         if(UiThreadContext.isInUiThread())
         {
-            callExecute(context, task);
+            insertTask(task);
         }
         else
         {
-            Message message = handler.obtainMessage(QueueHandler.CALL_EXECUTE, new CallExecutePackage(context, task));
+            Message message = handler.obtainMessage(QueueHandler.INSERT_TASK, task);
             handler.sendMessage(message);
         }
-    }
-
-    private static class CallExecutePackage
-    {
-        public final Context context;
-        public final Task task;
-
-        private CallExecutePackage(Context context, Task task)
-        {
-            this.context = context;
-            this.task = task;
-        }
-    }
-
-    private void callExecute(Context context, Task task)
-    {
-        UiThreadContext.assertUiThread();
-
-        if(application == null)
-            application = (Application) context.getApplicationContext();
-
-        tasks.add(task);
-
-        resetPollRunnable();
-    }
-
-    private void resetPollRunnable()
-    {
-        handler.removeMessages(QueueHandler.POLL_TASK);
-        handler.sendMessage(handler.obtainMessage(QueueHandler.POLL_TASK));
     }
 
     private class ExeTask implements Runnable
@@ -214,7 +106,7 @@ public class TaskQueue
             }
             catch (Throwable e)
             {
-                boolean handled = task.handleError(e);
+                boolean handled = task.handleError(application, e);
                 if (!handled)
                 {
                     handler.sendMessage(handler.obtainMessage(QueueHandler.THROW, e));

@@ -2,6 +2,7 @@ package co.touchlab.android.threading.tasks.persisted;
 
 import android.content.Context;
 import co.touchlab.android.threading.errorcontrol.SoftException;
+import co.touchlab.android.threading.tasks.Task;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Date: 1/11/12
  * Time: 8:57 AM
  */
-public abstract class Command implements Comparable<Command>
+public abstract class Command extends Task implements Comparable<Command>
 {
     public static final int MUCH_LOWER_PRIORITY = 1;
     public static final int LOWER_PRIORITY = 5;
@@ -123,12 +124,10 @@ public abstract class Command implements Comparable<Command>
      */
     public void onPermanentError(Context context, Throwable exception)
     {
-        boolean handled = handlePermanentError(context, exception);
+        boolean handled = handleError(context, exception);
         if(!handled)
             throw new SuperbusProcessException(exception);
     }
-
-    public abstract boolean handlePermanentError(Context context, Throwable exception);
 
     /**
      * Success!  Your command processed.
