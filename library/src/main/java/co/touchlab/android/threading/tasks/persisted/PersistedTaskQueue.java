@@ -52,13 +52,11 @@ public class PersistedTaskQueue extends BaseTaskQueue
                     addingTasks.clear();
                     runInBackground(new PersistTasksRunnable(copyPendingTasks));
                 }
+                break;
             case TRIGGER_PENDING:
                 List<Command> copyPersisted = (List<Command>)msg.obj;
                 pendingTasks.removeAll(copyPersisted);
-                for (Command copyPendingTask : copyPersisted)
-                {
-                    insertTask(copyPendingTask);
-                }
+                tasks.addAll(copyPersisted);
                 resetPollRunnable();
                 break;
         }
@@ -79,7 +77,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
                 case Transient:
                     logTransientException(container.c, container.cause);
-                    insertTask(container.c);
+                    tasks.offer(container.c);
                     shouldReset = false;
                     break;
 
@@ -429,6 +427,11 @@ public class PersistedTaskQueue extends BaseTaskQueue
             this.pending = pending;
             this.queued = queued;
             this.currentTask = currentTask;
+        }
+
+        public List<Command> getAdding()
+        {
+            return adding;
         }
 
         public List<Command> getPending()
