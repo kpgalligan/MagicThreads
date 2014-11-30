@@ -3,12 +3,13 @@ package co.touchlab.android.threading.tasks;
 import android.app.Application;
 import android.content.Context;
 import android.os.Message;
-import co.touchlab.android.threading.utils.UiThreadContext;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+
+import co.touchlab.android.threading.utils.UiThreadContext;
 
 /**
  * Relatively simple queue implementation.  See TaskQueueActual for detail on implementation.
@@ -22,15 +23,16 @@ public class TaskQueue extends BaseTaskQueue
 
     /**
      * Get a direct reference to your queue.  Call on main thread.
+     *
      * @param name
      * @return
      */
     public static synchronized TaskQueue loadQueue(Context context, String name)
     {
         TaskQueue taskQueueActual = queueMap.get(name);
-        if(taskQueueActual == null)
+        if (taskQueueActual == null)
         {
-            taskQueueActual = new TaskQueue((Application)context.getApplicationContext());
+            taskQueueActual = new TaskQueue((Application) context.getApplicationContext());
             queueMap.put(name, taskQueueActual);
         }
 
@@ -39,6 +41,7 @@ public class TaskQueue extends BaseTaskQueue
 
     /**
      * The default queue
+     *
      * @return
      */
     public static TaskQueue loadQueueDefault(Context context)
@@ -73,7 +76,7 @@ public class TaskQueue extends BaseTaskQueue
     {
         try
         {
-            if(task != null)
+            if (task != null)
             {
                 task.onComplete(application);
             }
@@ -91,7 +94,7 @@ public class TaskQueue extends BaseTaskQueue
      */
     public void execute(final Task task)
     {
-        if(UiThreadContext.isInUiThread())
+        if (UiThreadContext.isInUiThread())
         {
             insertTask(task);
         }
@@ -134,8 +137,6 @@ public class TaskQueue extends BaseTaskQueue
             }
         }
     }
-
-
 
 
 }

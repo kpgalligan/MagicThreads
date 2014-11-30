@@ -1,9 +1,10 @@
 package co.touchlab.android.threading.tasks.sticky;
 
 import android.os.Bundle;
-import co.touchlab.android.threading.utils.UiThreadContext;
 
 import java.util.concurrent.atomic.AtomicInteger;
+
+import co.touchlab.android.threading.utils.UiThreadContext;
 
 /**
  * Created by kgalligan on 10/26/14.
@@ -19,7 +20,7 @@ public class StickyTaskManager
     {
         UiThreadContext.assertUiThread();
 
-        if(inState == null || !inState.containsKey(CONTEXT_ID))
+        if (inState == null || !inState.containsKey(CONTEXT_ID))
             affinityId = idCounter.incrementAndGet();
         else
             affinityId = inState.getInt(CONTEXT_ID);

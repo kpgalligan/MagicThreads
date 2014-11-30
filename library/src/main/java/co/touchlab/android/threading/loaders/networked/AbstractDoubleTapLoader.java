@@ -1,6 +1,7 @@
 package co.touchlab.android.threading.loaders.networked;
 
 import android.content.Context;
+
 import co.touchlab.android.threading.eventbus.EventBusExt;
 import co.touchlab.android.threading.loaders.AbstractDataLoader;
 import co.touchlab.android.threading.tasks.TaskQueue;
@@ -73,7 +74,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
     @SuppressWarnings("UnusedDeclaration")
     public void onEventMainThread(StickyRemoteDataTask task)
     {
-        if(stickyTaskManager.isTaskForMe(task))
+        if (stickyTaskManager.isTaskForMe(task))
         {
             onContentChanged();
         }

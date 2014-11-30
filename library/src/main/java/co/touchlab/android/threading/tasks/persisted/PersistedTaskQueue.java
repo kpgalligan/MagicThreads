@@ -2,12 +2,18 @@ package co.touchlab.android.threading.tasks.persisted;
 
 import android.app.Application;
 import android.os.Message;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Queue;
+
 import co.touchlab.android.threading.errorcontrol.SoftException;
 import co.touchlab.android.threading.tasks.BaseTaskQueue;
 import co.touchlab.android.threading.tasks.Task;
 import co.touchlab.android.threading.utils.UiThreadContext;
-
-import java.util.*;
 
 /**
  * Created by kgalligan on 9/28/14.
@@ -45,7 +51,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
                 callExecute((Command) msg.obj);
                 break;
             case PERSIST_ALL_ADDING:
-                if(!addingTasks.isEmpty())
+                if (!addingTasks.isEmpty())
                 {
                     List<Command> copyPendingTasks = new ArrayList<Command>(addingTasks);
                     pendingTasks.addAll(addingTasks);
@@ -54,7 +60,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
                 }
                 break;
             case TRIGGER_PENDING:
-                List<Command> copyPersisted = (List<Command>)msg.obj;
+                List<Command> copyPersisted = (List<Command>) msg.obj;
                 pendingTasks.removeAll(copyPersisted);
                 tasks.addAll(copyPersisted);
                 resetPollRunnable();
@@ -65,7 +71,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
     @Override
     protected void finishTask(Message msg, Task task)
     {
-        FinishTaskContainer container = (FinishTaskContainer)msg.obj;
+        FinishTaskContainer container = (FinishTaskContainer) msg.obj;
         boolean shouldReset = true;
         try
         {
@@ -91,7 +97,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
         }
         finally
         {
-            if(shouldReset)
+            if (shouldReset)
                 resetPollRunnable();
         }
     }
@@ -144,17 +150,16 @@ public class PersistedTaskQueue extends BaseTaskQueue
     }
 
 
-
     private boolean checkHasDuplicate(Command c)
     {
         UiThreadContext.assertUiThread();
 
         boolean duplicate = checkCollectionHasDuplicate(c, addingTasks);
 
-        if(!duplicate)
+        if (!duplicate)
             duplicate = checkCollectionHasDuplicate(c, pendingTasks);
 
-        if(!duplicate)
+        if (!duplicate)
             duplicate = checkCollectionHasDuplicate(c, tasks);
 
         return duplicate;
@@ -165,7 +170,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
         //Did this because generic collection type checking was nasty
         for (Object command : collection)
         {
-            if (command instanceof Command && c.same((Command)command))
+            if (command instanceof Command && c.same((Command) command))
             {
                 return true;
             }
@@ -328,7 +333,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
     @Override
     protected void runTask(Task task)
     {
-        runInBackground(new ExeTask((Command)task));
+        runInBackground(new ExeTask((Command) task));
     }
 
     /**
@@ -397,13 +402,13 @@ public class PersistedTaskQueue extends BaseTaskQueue
                 }
                 catch (Throwable e)
                 {
-                    if(e instanceof RuntimeException)
+                    if (e instanceof RuntimeException)
                     {
-                        throw (RuntimeException)e;
+                        throw (RuntimeException) e;
                     }
-                    else if(e instanceof Error)//TODO: Intellij says this is always true, but I think its wrong...
+                    else if (e instanceof Error)//TODO: Intellij says this is always true, but I think its wrong...
                     {
-                        throw (Error)e;
+                        throw (Error) e;
                     }
                     else
                     {

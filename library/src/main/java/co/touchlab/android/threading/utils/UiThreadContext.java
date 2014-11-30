@@ -5,7 +5,7 @@ import android.os.Looper;
 /**
  * Checks current thread, and throws a RuntimeException if you're not where you're supposed to
  * be.
- *
+ * <p/>
  * Created by kgalligan on 7/6/14.
  */
 public class UiThreadContext
@@ -15,11 +15,12 @@ public class UiThreadContext
      */
     public static void assertUiThread()
     {
-        if(!isInUiThread())
+        if (!isInUiThread())
             throw new RuntimeException("This call must be in UI thread");
     }
 
-    public static boolean isInUiThread() {
+    public static boolean isInUiThread()
+    {
         Thread uiThread = Looper.getMainLooper().getThread();
         Thread currentThread = Thread.currentThread();
 
@@ -31,7 +32,7 @@ public class UiThreadContext
      */
     public static void assertBackgroundThread()
     {
-        if(isInUiThread())
+        if (isInUiThread())
             throw new RuntimeException("This call must be in background thread");
     }
 }

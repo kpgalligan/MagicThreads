@@ -1,9 +1,10 @@
 package co.touchlab.android.threading.tasks.persisted.storage.gson;
 
+import com.google.gson.Gson;
+
 import co.touchlab.android.threading.tasks.persisted.Command;
 import co.touchlab.android.threading.tasks.persisted.SuperbusProcessException;
 import co.touchlab.android.threading.tasks.persisted.storage.StoredCommandAdapter;
-import com.google.gson.Gson;
 
 /**
  * Created with IntelliJ IDEA.
@@ -38,7 +39,7 @@ public class GsonStoredCommandAdapter implements StoredCommandAdapter
     private Gson gsonForThread()
     {
         Gson gson = gsonThreadLocal.get();
-        if(gson == null)
+        if (gson == null)
         {
             gson = new Gson();
             gsonThreadLocal.set(gson);

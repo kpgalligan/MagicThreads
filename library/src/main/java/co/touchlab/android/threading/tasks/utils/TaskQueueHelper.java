@@ -30,7 +30,7 @@ public class TaskQueueHelper
         {
             for (Class aClass : classes)
             {
-                if(task.getClass().equals(aClass))
+                if (task.getClass().equals(aClass))
                 {
                     found = true;
                     break;

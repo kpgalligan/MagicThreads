@@ -4,7 +4,6 @@ import android.app.Application;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import co.touchlab.android.threading.utils.UiThreadContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +12,8 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+
+import co.touchlab.android.threading.utils.UiThreadContext;
 
 /**
  * Created by kgalligan on 11/30/14.
@@ -74,7 +75,7 @@ public abstract class BaseTaskQueue
             switch (msg.what)
             {
                 case INSERT_TASK:
-                    insertTask((Task)msg.obj);
+                    insertTask((Task) msg.obj);
                     break;
                 case POLL_TASK:
                     if (currentTask != null)
@@ -93,11 +94,11 @@ public abstract class BaseTaskQueue
                     finishTask(msg, tempTask);
                     break;
                 case THROW:
-                    Throwable cause = (Throwable)msg.obj;
-                    if(cause instanceof RuntimeException)
-                        throw (RuntimeException)cause;
-                    else if(cause instanceof Error)
-                        throw (Error)cause;
+                    Throwable cause = (Throwable) msg.obj;
+                    if (cause instanceof RuntimeException)
+                        throw (RuntimeException) cause;
+                    else if (cause instanceof Error)
+                        throw (Error) cause;
                     else
                         throw new RuntimeException(cause);
                 default:
@@ -142,7 +143,9 @@ public abstract class BaseTaskQueue
     }
 
     protected abstract Queue<Task> createQueue();
+
     protected abstract void runTask(Task task);
+
     protected abstract void finishTask(Message msg, Task task);
 
     protected void otherOperations(Message msg)
@@ -169,7 +172,7 @@ public abstract class BaseTaskQueue
             queueQuery.query(task);
         }
 
-        if(currentTask != null)
+        if (currentTask != null)
             queueQuery.query(currentTask);
     }
 }
