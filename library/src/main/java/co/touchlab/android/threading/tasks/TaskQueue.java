@@ -4,7 +4,9 @@ import android.app.Application;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import co.touchlab.android.threading.utils.UiThreadContext;
+import javafx.embed.swt.SWTFXUtils;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -68,8 +70,6 @@ public class TaskQueue
     //*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
     private final Handler handler;
-    private final PollRunnable pollRunnable = new PollRunnable();
-    private final PostExeRunnable postExeRunnable = new PostExeRunnable();
     private final ExecutorService executorService = Executors.newSingleThreadExecutor(new ThreadFactory()
     {
         @Override
@@ -84,9 +84,67 @@ public class TaskQueue
 
     public TaskQueue()
     {
-        handler = new Handler(Looper.getMainLooper());
+        handler = new QueueHandler(Looper.getMainLooper());
     }
 
+    private class QueueHandler extends Handler
+    {
+        static final int CALL_EXECUTE = 0;
+        static final int POLL_TASK = 1;
+        static final int POST_EXE = 2;
+        static final int THROW = 3;
+
+        private QueueHandler(Looper looper)
+        {
+            super(looper);
+        }
+
+        @Override
+        public void handleMessage(Message msg)
+        {
+            switch (msg.what)
+            {
+                case CALL_EXECUTE:
+                    CallExecutePackage executePackage = (CallExecutePackage) msg.obj;
+                    callExecute(executePackage.context, executePackage.task);
+                    break;
+                case POLL_TASK:
+                    if (currentTask != null)
+                        return;
+
+                    Task task = tasks.poll();
+                    if (task != null)
+                    {
+                        currentTask = task;
+                        executorService.execute(new ExeTask(task));
+                    }
+                    break;
+                case POST_EXE:
+                    try
+                    {
+                        if(currentTask != null)
+                        {
+                            Task tempTask = currentTask;
+                            currentTask = null;
+                            tempTask.onComplete(application);
+                        }
+                    }
+                    finally
+                    {
+                        resetPollRunnable();
+                    }
+                    break;
+                case THROW:
+                    Throwable cause = (Throwable)msg.obj;
+                    if(cause instanceof RuntimeException)
+                        throw (RuntimeException)cause;
+                    else if(cause instanceof Error)
+                        throw (Error)cause;
+                    else
+                        throw new RuntimeException(cause);
+            }
+        }
+    }
     /**
      * Puts a task on the queue.  Call on main thread only.
      *
@@ -101,12 +159,20 @@ public class TaskQueue
         }
         else
         {
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    callExecute(context, task);
-                }
-            });
+            Message message = handler.obtainMessage(QueueHandler.CALL_EXECUTE, new CallExecutePackage(context, task));
+            handler.sendMessage(message);
+        }
+    }
+
+    private static class CallExecutePackage
+    {
+        public final Context context;
+        public final Task task;
+
+        private CallExecutePackage(Context context, Task task)
+        {
+            this.context = context;
+            this.task = task;
         }
     }
 
@@ -124,27 +190,8 @@ public class TaskQueue
 
     private void resetPollRunnable()
     {
-        handler.removeCallbacks(pollRunnable);
-        handler.post(pollRunnable);
-    }
-
-    private class PollRunnable implements Runnable
-    {
-        @Override
-        public void run()
-        {
-            UiThreadContext.assertUiThread();
-
-            if (currentTask != null)
-                return;
-
-            Task task = tasks.poll();
-            if (task != null)
-            {
-                currentTask = task;
-                executorService.execute(new ExeTask(task));
-            }
-        }
+        handler.removeMessages(QueueHandler.POLL_TASK);
+        handler.sendMessage(handler.obtainMessage(QueueHandler.POLL_TASK));
     }
 
     private class ExeTask implements Runnable
@@ -169,55 +216,13 @@ public class TaskQueue
             {
                 boolean handled = task.handleError(e);
                 if (!handled)
-                    handler.post(new ThrowRunnable(e));
-            }
-            finally
-            {
-                handler.post(postExeRunnable);
-            }
-        }
-    }
-
-    private class ThrowRunnable implements Runnable
-    {
-        private Throwable cause;
-
-        private ThrowRunnable(Throwable cause)
-        {
-            this.cause = cause;
-        }
-
-        @Override
-        public void run()
-        {
-            if(cause instanceof RuntimeException)
-                throw (RuntimeException)cause;
-            else if(cause instanceof Error)
-                throw (Error)cause;
-            else
-                throw new RuntimeException(cause);
-        }
-    }
-
-    private class PostExeRunnable implements Runnable
-    {
-        @Override
-        public void run()
-        {
-            UiThreadContext.assertUiThread();
-
-            try
-            {
-                if(currentTask != null)
                 {
-                    Task task = currentTask;
-                    currentTask = null;
-                    task.onComplete(application);
+                    handler.sendMessage(handler.obtainMessage(QueueHandler.THROW, e));
                 }
             }
             finally
             {
-                resetPollRunnable();
+                handler.sendMessage(handler.obtainMessage(QueueHandler.POST_EXE));
             }
         }
     }
