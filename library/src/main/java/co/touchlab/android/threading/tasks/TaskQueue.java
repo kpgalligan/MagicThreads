@@ -2,19 +2,13 @@ package co.touchlab.android.threading.tasks;
 
 import android.app.Application;
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
 import co.touchlab.android.threading.utils.UiThreadContext;
-import javafx.embed.swt.SWTFXUtils;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 /**
  * Relatively simple queue implementation.  See TaskQueueActual for detail on implementation.
@@ -63,9 +57,31 @@ public class TaskQueue extends BaseTaskQueue
     }
 
     @Override
+    protected Queue<Task> createQueue()
+    {
+        return new LinkedList<Task>();
+    }
+
+    @Override
     protected void runTask(Task task)
     {
         executorService.execute(new ExeTask(task));
+    }
+
+    @Override
+    protected void finishTask(Message msg, Task task)
+    {
+        try
+        {
+            if(task != null)
+            {
+                task.onComplete(application);
+            }
+        }
+        finally
+        {
+            resetPollRunnable();
+        }
     }
 
     /**
@@ -119,26 +135,7 @@ public class TaskQueue extends BaseTaskQueue
         }
     }
 
-    /**
-     * Query existing tasks.  Call on main thread only.
-     *
-     * @param queueQuery
-     */
-    public void query(QueueQuery queueQuery)
-    {
-        UiThreadContext.assertUiThread();
 
-        for (Task task : tasks)
-        {
-            queueQuery.query(task);
-        }
 
-        if(currentTask != null)
-            queueQuery.query(currentTask);
-    }
 
-    public interface QueueQuery
-    {
-        void query(Task task);
-    }
 }

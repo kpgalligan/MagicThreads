@@ -1,144 +1,100 @@
 package co.touchlab.android.threading.tasks.persisted;
 
 import android.app.Application;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
 import co.touchlab.android.threading.errorcontrol.SoftException;
+import co.touchlab.android.threading.tasks.BaseTaskQueue;
 import co.touchlab.android.threading.tasks.Task;
 import co.touchlab.android.threading.utils.UiThreadContext;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 /**
  * Created by kgalligan on 9/28/14.
  */
-public class PersistedTaskQueue
+public class PersistedTaskQueue extends BaseTaskQueue
 {
     public static final String TAG = PersistedTaskQueue.class.getSimpleName();
 
-    private final Handler handler;
-
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor(new ThreadFactory()
-    {
-        @Override
-        public Thread newThread(Runnable r)
-        {
-            return new Thread(r);
-        }
-    });
+    static final int START_PERSISTING_TASK = 200;
+    static final int PERSIST_ALL_ADDING = 300;
+    static final int TRIGGER_PENDING = 400;
 
     private Queue<Command> addingTasks = new LinkedList<Command>();
     private Queue<Command> pendingTasks = new LinkedList<Command>();
 
-    private Queue<Command> commandQueue = new PriorityQueue<Command>();
-
-    private Command currentTask;
-
     private PersistenceProvider provider;
-    private Application appContext;
     private CommandPurgePolicy commandPurgePolicy;
     private BusLog log;
 
     public PersistedTaskQueue(Application appContext, PersistedTaskQueueConfig config)
     {
-        handler = new QueueHandler(Looper.getMainLooper());
-        this.appContext = appContext;
+        super(appContext);
         provider = config.getPersistenceProvider();
         commandPurgePolicy = config.commandPurgePolicy;
         log = config.getLog();
         runInBackground(new LoadAllRunnable());
     }
 
-    private class QueueHandler extends Handler
+    @Override
+    protected void otherOperations(Message msg)
     {
-        static final int CALL_EXECUTE = 0;
-        static final int POLL_TASK = 1;
-        static final int POST_EXE = 2;
-        static final int PERSIST_ALL_ADDING = 3;
-        static final int TRIGGER_PENDING = 4;
-
-        private QueueHandler(Looper looper)
+        switch (msg.what)
         {
-            super(looper);
+            case START_PERSISTING_TASK:
+                callExecute((Command) msg.obj);
+                break;
+            case PERSIST_ALL_ADDING:
+                if(!addingTasks.isEmpty())
+                {
+                    List<Command> copyPendingTasks = new ArrayList<Command>(addingTasks);
+                    pendingTasks.addAll(addingTasks);
+                    addingTasks.clear();
+                    runInBackground(new PersistTasksRunnable(copyPendingTasks));
+                }
+            case TRIGGER_PENDING:
+                List<Command> copyPersisted = (List<Command>)msg.obj;
+                pendingTasks.removeAll(copyPersisted);
+                for (Command copyPendingTask : copyPersisted)
+                {
+                    insertTask(copyPendingTask);
+                }
+                resetPollRunnable();
+                break;
         }
+    }
 
-        @Override
-        public void handleMessage(Message msg)
+    @Override
+    protected void finishTask(Message msg, Task task)
+    {
+        FinishTaskContainer container = (FinishTaskContainer)msg.obj;
+        boolean shouldReset = true;
+        try
         {
-            switch (msg.what)
+            switch (container.commandResult)
             {
-                case CALL_EXECUTE:
-                    callExecute((Command) msg.obj);
-                    break;
-                case POLL_TASK:
-                    if (currentTask != null)
-                        return;
-
-                    Command command = commandQueue.poll();
-                    if (command != null)
-                    {
-                        currentTask = command;
-                        runInBackground(new ExeTask(command));
-                    }
-                    break;
-                case POST_EXE:
-                    try
-                    {
-                        FinishTaskContainer container = (FinishTaskContainer)msg.obj;
-
-                        currentTask = null;
-
-                        switch (container.commandResult)
-                        {
-                            case Success:
-                                container.c.onComplete(appContext);
-                                resetPollRunnable();
-                                break;
-
-                            case Transient:
-                                logTransientException(container.c, container.cause);
-                                commandQueue.add(container.c);
-                                break;
-
-                            case Permanent:
-                                logPermanentException(container.c, container.cause);
-                                resetPollRunnable();
-                                break;
-
-                            default:
-                                throw new SuperbusProcessException("Unknown status");
-                        }
-                    }
-                    finally
-                    {
-                        resetPollRunnable();
-                    }
+                case Success:
+                    container.c.onComplete(application);
                     break;
 
-                case PERSIST_ALL_ADDING:
-                    if(!addingTasks.isEmpty())
-                    {
-                        List<Command> copyPendingTasks = new ArrayList<Command>(addingTasks);
-                        pendingTasks.addAll(addingTasks);
-                        addingTasks.clear();
-                        runInBackground(new PersistTasksRunnable(copyPendingTasks));
-                    }
+                case Transient:
+                    logTransientException(container.c, container.cause);
+                    insertTask(container.c);
+                    shouldReset = false;
                     break;
 
-                case TRIGGER_PENDING:
-                    List<Command> copyPersisted = (List<Command>)msg.obj;
-                    pendingTasks.removeAll(copyPersisted);
-                    for (Command copyPendingTask : copyPersisted)
-                    {
-                        commandQueue.offer(copyPendingTask);
-                    }
-                    resetPollRunnable();
+                case Permanent:
+                    logPermanentException(container.c, container.cause);
                     break;
+
+                default:
+                    throw new SuperbusProcessException("Unknown status");
             }
+        }
+        finally
+        {
+            if(shouldReset)
+                resetPollRunnable();
         }
     }
 
@@ -155,27 +111,8 @@ public class PersistedTaskQueue
         }
         else
         {
-            handler.sendMessage(handler.obtainMessage(QueueHandler.CALL_EXECUTE, task));
+            handler.sendMessage(handler.obtainMessage(START_PERSISTING_TASK, task));
         }
-    }
-
-    /**
-     * Added for testing, but you can use this as long as you're careful.  Somebody will blow up their app by editing the commands, but
-     * I told you not to, so that's your problem.
-     *
-     * @return
-     */
-    public PersistedTaskQueueState copyState()
-    {
-        UiThreadContext.assertUiThread();
-
-        PriorityQueue<Command> commands = new PriorityQueue<Command>(commandQueue);
-        List<Command> commandList = new ArrayList<Command>();
-        while (!commands.isEmpty())
-        {
-            commandList.add(commands.poll());
-        }
-        return new PersistedTaskQueueState(new ArrayList<Command>(pendingTasks), commandList, currentTask);
     }
 
     private void callExecute(Command task)
@@ -189,9 +126,26 @@ public class PersistedTaskQueue
 
         addingTasks.add(task);
 
-        handler.removeMessages(QueueHandler.PERSIST_ALL_ADDING);
-        handler.sendMessage(handler.obtainMessage(QueueHandler.PERSIST_ALL_ADDING));
+        handler.removeMessages(PERSIST_ALL_ADDING);
+        handler.sendMessage(handler.obtainMessage(PERSIST_ALL_ADDING));
     }
+
+    /**
+     * Added for testing, but you can use this as long as you're careful.  Somebody will blow up their app by editing the commands, but
+     * I told you not to, so that's your problem.
+     *
+     * @return
+     */
+    public PersistedTaskQueueState copyPersistedState()
+    {
+        UiThreadContext.assertUiThread();
+
+        TaskQueueState taskQueueState = copyState();
+
+        return new PersistedTaskQueueState(new ArrayList<Command>(addingTasks), new ArrayList<Command>(pendingTasks), taskQueueState.getQueued(), taskQueueState.getCurrentTask());
+    }
+
+
 
     private boolean checkHasDuplicate(Command c)
     {
@@ -203,16 +157,17 @@ public class PersistedTaskQueue
             duplicate = checkCollectionHasDuplicate(c, pendingTasks);
 
         if(!duplicate)
-            duplicate = checkCollectionHasDuplicate(c, commandQueue);
+            duplicate = checkCollectionHasDuplicate(c, tasks);
 
         return duplicate;
     }
 
-    private boolean checkCollectionHasDuplicate(Command c, Collection<Command> collection)
+    private boolean checkCollectionHasDuplicate(Command c, Collection collection)
     {
-        for (Command command : collection)
+        //Did this because generic collection type checking was nasty
+        for (Object command : collection)
         {
-            if (c.same(command))
+            if (command instanceof Command && c.same((Command)command))
             {
                 return true;
             }
@@ -237,7 +192,10 @@ public class PersistedTaskQueue
                 @Override
                 public void run()
                 {
-                    commandQueue.addAll(commands);
+                    for (Command command : commands)
+                    {
+                        insertTask(command);
+                    }
                 }
             });
 
@@ -262,16 +220,10 @@ public class PersistedTaskQueue
             UiThreadContext.assertBackgroundThread();
 
             provider.saveCommandBatch(tasks);
-            handler.sendMessage(handler.obtainMessage(QueueHandler.TRIGGER_PENDING, tasks));
+            handler.sendMessage(handler.obtainMessage(TRIGGER_PENDING, tasks));
 
             log.d(TAG, "PersistTasksRunnable - end - " + (System.currentTimeMillis() - start));
         }
-    }
-
-    private void resetPollRunnable()
-    {
-        handler.removeMessages(QueueHandler.POLL_TASK);
-        handler.sendMessage(handler.obtainMessage(QueueHandler.POLL_TASK));
     }
 
     public void restartQueue()
@@ -364,9 +316,21 @@ public class PersistedTaskQueue
     {
         logCommandVerbose(command, "callCommand-start");
 
-        command.run(appContext);
+        command.run(application);
 
         logCommandVerbose(command, "callComand-finish");
+    }
+
+    @Override
+    protected Queue<Task> createQueue()
+    {
+        return new PriorityQueue<Task>();
+    }
+
+    @Override
+    protected void runTask(Task task)
+    {
+        runInBackground(new ExeTask((Command)task));
     }
 
     /**
@@ -388,18 +352,7 @@ public class PersistedTaskQueue
             queueQuery.query(pendingTask);
         }
 
-        for (Command task : commandQueue)
-        {
-            queueQuery.query(task);
-        }
-
-        if (currentTask != null)
-            queueQuery.query(currentTask);
-    }
-
-    public interface QueueQuery
-    {
-        void query(Command task);
+        super.query(queueQuery);
     }
 
     private void logQueueState()
@@ -423,14 +376,14 @@ public class PersistedTaskQueue
     {
         log.e(TAG, null, e);
         SoftException pe = e instanceof SoftException ? (SoftException) e : new SoftException(e);
-        c.onTransientError(appContext, pe);
+        c.onTransientError(application, pe);
     }
 
     private void logPermanentException(Command c, Throwable e)
     {
         log.e(TAG, null, e);
 
-        c.onPermanentError(appContext, e);
+        c.onPermanentError(application, e);
     }
 
     private void runInBackground(final Runnable r)
@@ -465,12 +418,14 @@ public class PersistedTaskQueue
 
     public static class PersistedTaskQueueState
     {
+        List<Command> adding;
         List<Command> pending;
-        List<Command> queued;
-        Command currentTask;
+        List<Task> queued;
+        Task currentTask;
 
-        public PersistedTaskQueueState(List<Command> pending, List<Command> queued, Command currentTask)
+        public PersistedTaskQueueState(List<Command> adding, List<Command> pending, List<Task> queued, Task currentTask)
         {
+            this.adding = adding;
             this.pending = pending;
             this.queued = queued;
             this.currentTask = currentTask;
@@ -481,12 +436,12 @@ public class PersistedTaskQueue
             return pending;
         }
 
-        public List<Command> getQueued()
+        public List<Task> getQueued()
         {
             return queued;
         }
 
-        public Command getCurrentTask()
+        public Task getCurrentTask()
         {
             return currentTask;
         }

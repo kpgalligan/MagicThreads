@@ -28,7 +28,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
     {
         super(context);
         stickyTaskManager = new StickyTaskManager(null);
-        loaderQueue = TaskQueue.loadQueue("LOADER_QUEUE");
+        loaderQueue = TaskQueue.loadQueue(context, "LOADER_QUEUE");
         EventBusExt.getDefault().register(this);
     }
 
@@ -57,7 +57,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         }
 
         @Override
-        protected boolean handleError(Throwable e)
+        protected boolean handleError(Context context, Throwable e)
         {
             return false;
         }
@@ -86,7 +86,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         {
             remoteCalled = true;
             StickyRemoteDataTask stickyRemoteDataTask = new StickyRemoteDataTask(stickyTaskManager);
-            loaderQueue.execute(getContext(), stickyRemoteDataTask);
+            loaderQueue.execute(stickyRemoteDataTask);
         }
 
         D localContent = findLocalContent();

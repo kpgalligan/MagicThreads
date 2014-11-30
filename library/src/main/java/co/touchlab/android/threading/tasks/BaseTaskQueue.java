@@ -6,7 +6,9 @@ import android.os.Looper;
 import android.os.Message;
 import co.touchlab.android.threading.utils.UiThreadContext;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,7 +21,7 @@ public abstract class BaseTaskQueue
 {
     protected Application application;
     protected final Handler handler;
-    private Queue<Task> tasks = new LinkedList<Task>();
+    protected Queue<Task> tasks;
     private Task currentTask;
 
     protected final ExecutorService executorService = Executors.newSingleThreadExecutor(new ThreadFactory()
@@ -36,13 +38,14 @@ public abstract class BaseTaskQueue
     {
         this.application = application;
         handler = new QueueHandler(Looper.getMainLooper());
+        tasks = createQueue();
     }
 
     protected void insertTask(Task task)
     {
         UiThreadContext.assertUiThread();
 
-        tasks.add(task);
+        tasks.offer(task);
 
         resetPollRunnable();
     }
@@ -57,7 +60,7 @@ public abstract class BaseTaskQueue
     {
         static final int INSERT_TASK = 0;
         static final int POLL_TASK = 1;
-        static final int POST_EXE = 2;
+        public static final int POST_EXE = 2;
         static final int THROW = 3;
 
         private QueueHandler(Looper looper)
@@ -85,19 +88,9 @@ public abstract class BaseTaskQueue
                     }
                     break;
                 case POST_EXE:
-                    try
-                    {
-                        if(currentTask != null)
-                        {
-                            Task tempTask = currentTask;
-                            currentTask = null;
-                            tempTask.onComplete(application);
-                        }
-                    }
-                    finally
-                    {
-                        resetPollRunnable();
-                    }
+                    Task tempTask = currentTask;
+                    currentTask = null;
+                    finishTask(msg, tempTask);
                     break;
                 case THROW:
                     Throwable cause = (Throwable)msg.obj;
@@ -107,10 +100,76 @@ public abstract class BaseTaskQueue
                         throw (Error)cause;
                     else
                         throw new RuntimeException(cause);
+                default:
+                    otherOperations(msg);
             }
         }
     }
 
-    protected abstract void runTask(Task task);
+    public TaskQueueState copyState()
+    {
+        UiThreadContext.assertUiThread();
 
+        PriorityQueue<Task> commands = new PriorityQueue<Task>(tasks);
+        List<Task> commandList = new ArrayList<Task>();
+        while (!commands.isEmpty())
+        {
+            commandList.add(commands.poll());
+        }
+        return new TaskQueueState(commandList, currentTask);
+    }
+
+    public static class TaskQueueState
+    {
+        List<Task> queued;
+        Task currentTask;
+
+        public TaskQueueState(List<Task> queued, Task currentTask)
+        {
+            this.queued = queued;
+            this.currentTask = currentTask;
+        }
+
+        public List<Task> getQueued()
+        {
+            return queued;
+        }
+
+        public Task getCurrentTask()
+        {
+            return currentTask;
+        }
+    }
+
+    protected abstract Queue<Task> createQueue();
+    protected abstract void runTask(Task task);
+    protected abstract void finishTask(Message msg, Task task);
+
+    protected void otherOperations(Message msg)
+    {
+
+    }
+
+    public interface QueueQuery
+    {
+        void query(Task task);
+    }
+
+    /**
+     * Query existing tasks.  Call on main thread only.
+     *
+     * @param queueQuery
+     */
+    public void query(QueueQuery queueQuery)
+    {
+        UiThreadContext.assertUiThread();
+
+        for (Task task : tasks)
+        {
+            queueQuery.query(task);
+        }
+
+        if(currentTask != null)
+            queueQuery.query(currentTask);
+    }
 }
