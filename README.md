@@ -6,12 +6,15 @@ the java project.
 
 https://github.com/touchlab/MagicThreadsDemo
 
-## errorcontrol
+## tasks
 
-This is in development. The basic idea is there are 2 types of exceptions in this world:
-hard and soft. Soft happen sometimes, due to current conditions (basically network problems).
-Hard is everything else. You *shouldn't* have hard exceptions, and in general I prefer
-to let the app crash from unknown hard exceptions. Fail and fix.
+TaskQueue is a background task executor. Its conceptually similar to running tasks in an executor service,
+but has a few features that stick out. Tasks run in the background, but orchestration is done with the main thread.
+The benefit is a long story, but in summary, it helps with UI modification. Also, you can query the live queue.
+The main use case is to start a long running process, and enable/disable your input based on the live state of the queue
+itself. Its safer than using surrogate boolean state, and makes rotation support easier (IMHO. YMMV).
+
+[Persisted Task Queue](https://github.com/touchlab/MagicThreads/blob/master/library/docs/PERSISTED_QUEUE.md)
 
 ## eventbus
 
@@ -30,19 +33,14 @@ for example), Loaders work well.
 
 [More Loaders Info](https://github.com/touchlab/MagicThreads/blob/master/LOADERS.md)
 
-## tasks
-
-BsyncTask works like AsyncTask, but attempts to support rotations, and aligning a reference to a caller
-isn't done by carrying a reference to the caller around.  It "works", but its experimental, and I find
-it kind of hacky. May go away.
-
-TaskQueue is a background task executor. Its conceptually similar to running tasks in an executor service,
-but has a few features that stick out. Tasks run in the background, but orchestration is done with the main thread.
-The benefit is a long story, but in summary, it helps with UI modification. Also, you can query the live queue.
-The main use case is to start a long running process, and enable/disable your input based on the live state of the queue
-itself. Its safer than using surrogate boolean state, and makes rotation support easier (IMHO. YMMV).
-
 ## utils
 
 UiThreadContext lets you assert if you're in the main thread or not in the main thread. I sometimes put that into
 methods where the calling context isn't entirely clear.
+
+## errorcontrol
+
+This is in development. The basic idea is there are 2 types of exceptions in this world:
+hard and soft. Soft happen sometimes, due to current conditions (basically network problems).
+Hard is everything else. You *shouldn't* have hard exceptions, and in general I prefer
+to let the app crash from unknown hard exceptions. Fail and fix.
