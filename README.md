@@ -6,7 +6,7 @@ the java project.
 
 https://github.com/touchlab/MagicThreadsDemo
 
-Watch a demo video to see what's happening: http://youtu.be/vmTRGkJWEig
+Watch a demo video to see what's happening: https://www.youtube.com/watch?v=JWU2a5IWziQ&feature=youtu.be
 
 ## tasks
 
