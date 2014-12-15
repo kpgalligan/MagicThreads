@@ -11,17 +11,17 @@ import co.touchlab.android.threading.utils.UiThreadContext;
  */
 public class StickyTaskManager
 {
-    private final static AtomicInteger idCounter = new AtomicInteger();
+    private static long idCounter = System.currentTimeMillis();
     public static final String CONTEXT_ID = "CONTEXT_ID";
 
-    protected final int affinityId;
+    protected final long affinityId;
 
     public StickyTaskManager(Bundle inState)
     {
         UiThreadContext.assertUiThread();
 
         if (inState == null || !inState.containsKey(CONTEXT_ID))
-            affinityId = idCounter.incrementAndGet();
+            affinityId = idCounter++;
         else
             affinityId = inState.getInt(CONTEXT_ID);
     }
@@ -29,7 +29,7 @@ public class StickyTaskManager
     public void onSaveInstanceState(Bundle outState)
     {
         UiThreadContext.assertUiThread();
-        outState.putInt(CONTEXT_ID, affinityId);
+        outState.putLong(CONTEXT_ID, affinityId);
     }
 
     public boolean isTaskForMe(StickyTask stickyTask)
