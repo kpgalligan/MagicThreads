@@ -6,6 +6,8 @@ the java project.
 
 https://github.com/touchlab/MagicThreadsDemo
 
+Watch a demo video to see what's happening: http://youtu.be/vmTRGkJWEig
+
 ## tasks
 
 TaskQueue is a background task executor. Its conceptually similar to running tasks in an executor service,
