@@ -1,6 +1,6 @@
 package co.touchlab.android.threading.tasks.persisted.storage;
 
-import co.touchlab.android.threading.tasks.persisted.Command;
+import co.touchlab.android.threading.tasks.persisted.PersistedTask;
 import co.touchlab.android.threading.tasks.persisted.SuperbusProcessException;
 
 /**
@@ -12,7 +12,7 @@ import co.touchlab.android.threading.tasks.persisted.SuperbusProcessException;
  */
 public interface StoredCommandAdapter
 {
-    Command inflateCommand(String data, String className) throws SuperbusProcessException, ClassNotFoundException;
+    PersistedTask inflateCommand(String data, String className) throws SuperbusProcessException, ClassNotFoundException;
 
-    String storeCommand(Command command) throws SuperbusProcessException;
+    String storeCommand(PersistedTask persistedTask) throws SuperbusProcessException;
 }

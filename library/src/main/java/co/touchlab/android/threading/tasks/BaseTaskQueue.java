@@ -34,12 +34,24 @@ public abstract class BaseTaskQueue
         }
     });
 
+    private List<QueueListener> listeners = new ArrayList<QueueListener>();
+    private boolean startedCalled = false;
 
     public BaseTaskQueue(Application application)
     {
         this.application = application;
         handler = new QueueHandler(Looper.getMainLooper());
         tasks = createQueue();
+    }
+
+    public void addListener(QueueListener listener)
+    {
+        listeners.add(listener);
+    }
+
+    public void clearListeners()
+    {
+        listeners.clear();
     }
 
     protected void insertTask(Task task)
@@ -85,13 +97,34 @@ public abstract class BaseTaskQueue
                     if (task != null)
                     {
                         currentTask = task;
+                        if(!startedCalled)
+                        {
+                            startedCalled = true;
+                            for (QueueListener listener : listeners)
+                            {
+                                listener.queueStarted();
+                            }
+                        }
+                        for (QueueListener listener : listeners)
+                        {
+                            listener.taskStarted(task);
+                        }
                         runTask(task);
+                    }
+                    else
+                    {
+                        callQueueFinished();
+                        startedCalled = false;
                     }
                     break;
                 case POST_EXE:
                     Task tempTask = currentTask;
                     currentTask = null;
                     finishTask(msg, tempTask);
+                    for (QueueListener listener : listeners)
+                    {
+                        listener.taskFinished(tempTask);
+                    }
                     break;
                 case THROW:
                     Throwable cause = (Throwable) msg.obj;
@@ -104,6 +137,14 @@ public abstract class BaseTaskQueue
                 default:
                     otherOperations(msg);
             }
+        }
+    }
+
+    protected void callQueueFinished()
+    {
+        for (QueueListener listener : listeners)
+        {
+            listener.queueFinished();
         }
     }
 
@@ -156,6 +197,14 @@ public abstract class BaseTaskQueue
     public interface QueueQuery
     {
         void query(Task task);
+    }
+
+    public interface QueueListener
+    {
+        void queueStarted();
+        void queueFinished();
+        void taskStarted(Task task);
+        void taskFinished(Task task);
     }
 
     /**

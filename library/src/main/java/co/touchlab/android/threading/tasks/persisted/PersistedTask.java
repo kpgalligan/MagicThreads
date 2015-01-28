@@ -29,7 +29,7 @@ import co.touchlab.android.threading.tasks.Task;
  * Date: 1/11/12
  * Time: 8:57 AM
  */
-public abstract class Command extends Task implements Comparable<Command>
+public abstract class PersistedTask extends Task implements Comparable<PersistedTask>
 {
     public static final int MUCH_LOWER_PRIORITY = 1;
     public static final int LOWER_PRIORITY = 5;
@@ -55,7 +55,7 @@ public abstract class Command extends Task implements Comparable<Command>
      *
      * @return String representation of the command.  Human readable.  Bus doesn't care what this is, but keep in mind common sense performance considerations.
      */
-    public String logSummary()
+    protected String logSummary()
     {
         return getClass().getSimpleName();
     }
@@ -66,10 +66,10 @@ public abstract class Command extends Task implements Comparable<Command>
      * say you have a "RefreshAccounts" command.  Running that multiple times would probably be wasteful.
      * To ALWAYS run the command, simply return false.
      *
-     * @param command Command to test for "same-ness"
+     * @param persistedTask Command to test for "same-ness"
      * @return true if passed command is the same as this one.  False if not, or if the command should always run.
      */
-    public boolean same(Command command)
+    protected boolean same(PersistedTask persistedTask)
     {
         return false;
     }
@@ -106,14 +106,14 @@ public abstract class Command extends Task implements Comparable<Command>
      * @throws co.touchlab.android.threading.errorcontrol.SoftException
      * @throws java.lang.Throwable
      */
-    public abstract void run(Context context) throws SoftException, Throwable;
+    protected abstract void run(Context context) throws SoftException, Throwable;
 
     /**
      * There was a transient problem with this command.  Its being put back on the queue.
      *
      * @param exception Exception that caused the removal
      */
-    public void onTransientError(Context context, SoftException exception)
+    protected void onTransientError(Context context, SoftException exception)
     {
 
     }
@@ -124,7 +124,7 @@ public abstract class Command extends Task implements Comparable<Command>
      *
      * @param exception Exception that caused the removal
      */
-    public void onPermanentError(Context context, Throwable exception)
+    protected void onPermanentError(Context context, Throwable exception)
     {
         boolean handled = handleError(context, exception);
         if (!handled)
@@ -134,7 +134,7 @@ public abstract class Command extends Task implements Comparable<Command>
     /**
      * Success!  Your command processed.
      */
-    public void onComplete(Context context)
+    protected void onComplete(Context context)
     {
 
     }
@@ -166,7 +166,7 @@ public abstract class Command extends Task implements Comparable<Command>
      *
      * @param message String message that can be tested by each command.  Similar to broadcast action.
      */
-    public void onRuntimeMessage(Context context, String message)
+    protected void onRuntimeMessage(Context context, String message)
     {
         onRuntimeMessage(context, message, null);
     }
@@ -177,7 +177,7 @@ public abstract class Command extends Task implements Comparable<Command>
      * @param message
      * @param args
      */
-    public void onRuntimeMessage(Context context, String message, Map args)
+    protected void onRuntimeMessage(Context context, String message, Map args)
     {
 
     }
@@ -233,18 +233,18 @@ public abstract class Command extends Task implements Comparable<Command>
     }
 
     @Override
-    public int compareTo(Command command)
+    public int compareTo(PersistedTask persistedTask)
     {
-        int priorityCompare = command.getPriority() - priority;
+        int priorityCompare = persistedTask.getPriority() - priority;
         if (priorityCompare != 0)
         {
             return priorityCompare;
         }
-        int addedCompare = (int) (added - command.getAdded());
+        int addedCompare = (int) (added - persistedTask.getAdded());
         if (addedCompare != 0)
             return addedCompare;
 
-        return orderTie - command.orderTie;
+        return orderTie - persistedTask.orderTie;
     }
 
     private Long id;

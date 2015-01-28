@@ -11,13 +11,13 @@ import java.util.Collection;
  */
 public interface PersistenceProvider
 {
-    void removeCommand(Command command) throws SuperbusProcessException;
+    void removeCommand(PersistedTask persistedTask) throws SuperbusProcessException;
 
-    void saveCommand(Command command) throws SuperbusProcessException;
+    void saveCommand(PersistedTask persistedTask) throws SuperbusProcessException;
 
-    void saveCommandBatch(Collection<Command> commands) throws SuperbusProcessException;
+    void saveCommandBatch(Collection<PersistedTask> persistedTasks) throws SuperbusProcessException;
 
-    Collection<Command> loadPersistedCommands() throws SuperbusProcessException;
+    Collection<PersistedTask> loadPersistedCommands() throws SuperbusProcessException;
 
     void clearPersistedCommands() throws SuperbusProcessException;
 

@@ -19,7 +19,7 @@ import co.touchlab.android.threading.errorcontrol.SoftException;
 public class TransientMethuselahCommandPurgePolicy implements CommandPurgePolicy
 {
     @Override
-    public boolean purgeCommandOnTransientException(Command command, SoftException exception)
+    public boolean purgeCommandOnTransientException(PersistedTask persistedTask, SoftException exception)
     {
         return false;
     }

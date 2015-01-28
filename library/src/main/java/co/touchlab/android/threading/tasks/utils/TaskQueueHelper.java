@@ -1,5 +1,6 @@
 package co.touchlab.android.threading.tasks.utils;
 
+import co.touchlab.android.threading.tasks.BaseTaskQueue;
 import co.touchlab.android.threading.tasks.Task;
 import co.touchlab.android.threading.tasks.TaskQueue;
 import co.touchlab.android.threading.tasks.sticky.StickyTask;
@@ -10,12 +11,12 @@ import co.touchlab.android.threading.tasks.sticky.StickyTaskManager;
  */
 public class TaskQueueHelper
 {
-    public static boolean hasTasksOfType(TaskQueue taskQueueActual, Class... classes)
+    public static boolean hasTasksOfType(BaseTaskQueue taskQueueActual, Class... classes)
     {
         return hasTasksOfType(null, taskQueueActual, classes);
     }
 
-    public static boolean hasTasksOfType(StickyTaskManager stickyTaskManager, TaskQueue taskQueueActual, Class... classes)
+    public static boolean hasTasksOfType(StickyTaskManager stickyTaskManager, BaseTaskQueue taskQueueActual, Class... classes)
     {
         ClassesQuery queueQuery = new ClassesQuery(stickyTaskManager, classes);
         taskQueueActual.query(queueQuery);

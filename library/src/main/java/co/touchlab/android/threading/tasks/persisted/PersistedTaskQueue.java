@@ -26,8 +26,8 @@ public class PersistedTaskQueue extends BaseTaskQueue
     static final int PERSIST_ALL_ADDING = 300;
     static final int TRIGGER_PENDING = 400;
 
-    private Queue<Command> addingTasks = new LinkedList<Command>();
-    private Queue<Command> pendingTasks = new LinkedList<Command>();
+    private Queue<PersistedTask> addingTasks = new LinkedList<PersistedTask>();
+    private Queue<PersistedTask> pendingTasks = new LinkedList<PersistedTask>();
 
     private PersistenceProvider provider;
     private CommandPurgePolicy commandPurgePolicy;
@@ -48,19 +48,19 @@ public class PersistedTaskQueue extends BaseTaskQueue
         switch (msg.what)
         {
             case START_PERSISTING_TASK:
-                callExecute((Command) msg.obj);
+                callExecute((PersistedTask) msg.obj);
                 break;
             case PERSIST_ALL_ADDING:
                 if (!addingTasks.isEmpty())
                 {
-                    List<Command> copyPendingTasks = new ArrayList<Command>(addingTasks);
+                    List<PersistedTask> copyPendingTasks = new ArrayList<PersistedTask>(addingTasks);
                     pendingTasks.addAll(addingTasks);
                     addingTasks.clear();
                     runInBackground(new PersistTasksRunnable(copyPendingTasks));
                 }
                 break;
             case TRIGGER_PENDING:
-                List<Command> copyPersisted = (List<Command>) msg.obj;
+                List<PersistedTask> copyPersisted = (List<PersistedTask>) msg.obj;
                 pendingTasks.removeAll(copyPersisted);
                 tasks.addAll(copyPersisted);
                 resetPollRunnable();
@@ -85,6 +85,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
                     logTransientException(container.c, container.cause);
                     tasks.offer(container.c);
                     shouldReset = false;
+                    callQueueFinished();
                     break;
 
                 case Permanent:
@@ -107,7 +108,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
      *
      * @param task
      */
-    public void execute(final Command task)
+    public void execute(final PersistedTask task)
     {
         if (UiThreadContext.isInUiThread())
         {
@@ -119,7 +120,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
         }
     }
 
-    private void callExecute(Command task)
+    private void callExecute(PersistedTask task)
     {
         UiThreadContext.assertUiThread();
 
@@ -146,11 +147,11 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
         TaskQueueState taskQueueState = copyState();
 
-        return new PersistedTaskQueueState(new ArrayList<Command>(addingTasks), new ArrayList<Command>(pendingTasks), taskQueueState.getQueued(), taskQueueState.getCurrentTask());
+        return new PersistedTaskQueueState(new ArrayList<PersistedTask>(addingTasks), new ArrayList<PersistedTask>(pendingTasks), taskQueueState.getQueued(), taskQueueState.getCurrentTask());
     }
 
 
-    private boolean checkHasDuplicate(Command c)
+    private boolean checkHasDuplicate(PersistedTask c)
     {
         UiThreadContext.assertUiThread();
 
@@ -165,12 +166,12 @@ public class PersistedTaskQueue extends BaseTaskQueue
         return duplicate;
     }
 
-    private boolean checkCollectionHasDuplicate(Command c, Collection collection)
+    private boolean checkCollectionHasDuplicate(PersistedTask c, Collection collection)
     {
         //Did this because generic collection type checking was nasty
         for (Object command : collection)
         {
-            if (command instanceof Command && c.same((Command) command))
+            if (command instanceof PersistedTask && c.same((PersistedTask) command))
             {
                 return true;
             }
@@ -186,7 +187,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
         {
             UiThreadContext.assertBackgroundThread();
 
-            final Collection<Command> commands = provider.loadPersistedCommands();
+            final Collection<PersistedTask> persistedTasks = provider.loadPersistedCommands();
 
             //TODO: Checking 'same' on tasks added while loading from db may incorrectly return false and
             //add duplicate tasks.  To be complete, we should figure this out, but its a pretty minor issue
@@ -195,9 +196,9 @@ public class PersistedTaskQueue extends BaseTaskQueue
                 @Override
                 public void run()
                 {
-                    for (Command command : commands)
+                    for (PersistedTask persistedTask : persistedTasks)
                     {
-                        insertTask(command);
+                        insertTask(persistedTask);
                     }
                 }
             });
@@ -208,9 +209,9 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
     private class PersistTasksRunnable implements Runnable
     {
-        private List<Command> tasks;
+        private List<PersistedTask> tasks;
 
-        private PersistTasksRunnable(List<Command> tasks)
+        private PersistTasksRunnable(List<PersistedTask> tasks)
         {
             this.tasks = tasks;
         }
@@ -241,9 +242,9 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
     private class ExeTask implements Runnable
     {
-        private Command c;
+        private PersistedTask c;
 
-        private ExeTask(Command task)
+        private ExeTask(PersistedTask task)
         {
             this.c = task;
         }
@@ -303,11 +304,11 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
     private static class FinishTaskContainer
     {
-        private final Command c;
+        private final PersistedTask c;
         private final CommandResult commandResult;
         private final Throwable cause;
 
-        private FinishTaskContainer(Command c, CommandResult commandResult, Throwable cause)
+        private FinishTaskContainer(PersistedTask c, CommandResult commandResult, Throwable cause)
         {
             this.c = c;
             this.commandResult = commandResult;
@@ -315,13 +316,13 @@ public class PersistedTaskQueue extends BaseTaskQueue
         }
     }
 
-    private void callCommand(final Command command) throws Throwable
+    private void callCommand(final PersistedTask persistedTask) throws Throwable
     {
-        logCommandVerbose(command, "callCommand-start");
+        logCommandVerbose(persistedTask, "callCommand-start");
 
-        command.run(application);
+        persistedTask.run(application);
 
-        logCommandVerbose(command, "callComand-finish");
+        logCommandVerbose(persistedTask, "callComand-finish");
     }
 
     @Override
@@ -333,7 +334,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
     @Override
     protected void runTask(Task task)
     {
-        runInBackground(new ExeTask((Command) task));
+        runInBackground(new ExeTask((PersistedTask) task));
     }
 
     /**
@@ -345,12 +346,12 @@ public class PersistedTaskQueue extends BaseTaskQueue
     {
         UiThreadContext.assertUiThread();
 
-        for (Command pendingTask : addingTasks)
+        for (PersistedTask pendingTask : addingTasks)
         {
             queueQuery.query(pendingTask);
         }
 
-        for (Command pendingTask : pendingTasks)
+        for (PersistedTask pendingTask : pendingTasks)
         {
             queueQuery.query(pendingTask);
         }
@@ -363,11 +364,11 @@ public class PersistedTaskQueue extends BaseTaskQueue
         //TODO
     }
 
-    private void logCommandVerbose(Command command, String methodName)
+    private void logCommandVerbose(PersistedTask persistedTask, String methodName)
     {
         try
         {
-            log.v(TAG, methodName + ": " + command.getAdded() + " : " + command.logSummary());
+            log.v(TAG, methodName + ": " + persistedTask.getAdded() + " : " + persistedTask.logSummary());
         }
         catch (Exception e)
         {
@@ -375,14 +376,14 @@ public class PersistedTaskQueue extends BaseTaskQueue
         }
     }
 
-    private void logTransientException(Command c, Throwable e)
+    private void logTransientException(PersistedTask c, Throwable e)
     {
         log.e(TAG, null, e);
         SoftException pe = e instanceof SoftException ? (SoftException) e : new SoftException(e);
         c.onTransientError(application, pe);
     }
 
-    private void logPermanentException(Command c, Throwable e)
+    private void logPermanentException(PersistedTask c, Throwable e)
     {
         log.e(TAG, null, e);
 
@@ -421,12 +422,12 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
     public static class PersistedTaskQueueState
     {
-        List<Command> adding;
-        List<Command> pending;
+        List<PersistedTask> adding;
+        List<PersistedTask> pending;
         List<Task> queued;
         Task currentTask;
 
-        public PersistedTaskQueueState(List<Command> adding, List<Command> pending, List<Task> queued, Task currentTask)
+        public PersistedTaskQueueState(List<PersistedTask> adding, List<PersistedTask> pending, List<Task> queued, Task currentTask)
         {
             this.adding = adding;
             this.pending = pending;
@@ -434,12 +435,12 @@ public class PersistedTaskQueue extends BaseTaskQueue
             this.currentTask = currentTask;
         }
 
-        public List<Command> getAdding()
+        public List<PersistedTask> getAdding()
         {
             return adding;
         }
 
-        public List<Command> getPending()
+        public List<PersistedTask> getPending()
         {
             return pending;
         }

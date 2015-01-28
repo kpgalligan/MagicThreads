@@ -13,5 +13,5 @@ import co.touchlab.android.threading.errorcontrol.SoftException;
  */
 public interface CommandPurgePolicy
 {
-    boolean purgeCommandOnTransientException(Command command, SoftException exception);
+    boolean purgeCommandOnTransientException(PersistedTask persistedTask, SoftException exception);
 }
