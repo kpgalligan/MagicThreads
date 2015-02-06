@@ -6,12 +6,12 @@ import co.touchlab.android.threading.errorcontrol.SoftException;
 /**
  * Command processing errors will eventually need to purge commands and signal processing errors. Policy
  * defines how this purging is handled.
- *
+ * <p/>
  * User: kgalligan
  * Date: 10/13/12
  * Time: 3:23 AM
  */
 public interface CommandPurgePolicy
 {
-    boolean purgeCommandOnTransientException(Command command, SoftException exception);
+    boolean purgeCommandOnTransientException(PersistedTask persistedTask, SoftException exception);
 }

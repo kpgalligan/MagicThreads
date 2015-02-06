@@ -1,14 +1,19 @@
 package co.touchlab.android.threading.tasks.persisted;
 
 import android.content.ContentValues;
+
+import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import co.touchlab.android.threading.tasks.persisted.storage.StoredCommandAdapter;
 import co.touchlab.android.threading.tasks.persisted.storage.gson.GsonStoredCommandAdapter;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.CursorIntf;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseFactory;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseIntf;
-
-import java.lang.reflect.Constructor;
-import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -46,44 +51,44 @@ public class CommandPersistenceProvider implements PersistenceProvider
     }
 
     @Override
-    public void removeCommand(Command command) throws SuperbusProcessException
+    public void removeCommand(PersistedTask persistedTask) throws SuperbusProcessException
     {
         try
         {
-            int removedCount = databaseFactory.getDatabase().delete(TABLE_NAME, "id = ?", new String[]{command.getId().toString()});
-            if(removedCount != 1)
-                log.e(PersistedTaskQueue.TAG, "Deleted count != 1, was "+ removedCount);
+            int removedCount = databaseFactory.getDatabase().delete(TABLE_NAME, "id = ?", new String[]{persistedTask.getId().toString()});
+            if (removedCount != 1)
+                log.e(PersistedTaskQueue.TAG, "Deleted count != 1, was " + removedCount);
         }
         catch (Exception e)
         {
-            if(e instanceof SuperbusProcessException)
-                throw (SuperbusProcessException)e;
+            if (e instanceof SuperbusProcessException)
+                throw (SuperbusProcessException) e;
             else
                 throw new SuperbusProcessException(e);
         }
     }
 
     @Override
-    public void saveCommand(Command command) throws SuperbusProcessException
+    public void saveCommand(PersistedTask persistedTask) throws SuperbusProcessException
     {
         //Sanity check. StoredCommand classes need a no-arg constructor
-        checkNoArg(command);
+        checkNoArg(persistedTask);
 
         try
         {
-            ContentValues values = prepCommandSave(command);
+            ContentValues values = prepCommandSave(persistedTask);
 
-            if(command.getId() == null)
+            if (persistedTask.getId() == null)
             {
                 long newRowId = databaseFactory.getDatabase().insertOrThrow(
                         TABLE_NAME, "type", values
                 );
 
-                command.setId(newRowId);
+                persistedTask.setId(newRowId);
             }
             else
             {
-                databaseFactory.getDatabase().update(TABLE_NAME, values, "id = ?", new String[]{command.getId().toString()});
+                databaseFactory.getDatabase().update(TABLE_NAME, values, "id = ?", new String[]{persistedTask.getId().toString()});
             }
         }
         catch (SuperbusProcessException e)
@@ -97,15 +102,15 @@ public class CommandPersistenceProvider implements PersistenceProvider
     }
 
     @Override
-    public void saveCommandBatch(Collection<Command> commands) throws SuperbusProcessException
+    public void saveCommandBatch(Collection<PersistedTask> persistedTasks) throws SuperbusProcessException
     {
         SQLiteDatabaseIntf database = databaseFactory.getDatabase();
         try
         {
             database.beginTransaction();
-            for (Command command : commands)
+            for (PersistedTask persistedTask : persistedTasks)
             {
-                saveCommand(command);
+                saveCommand(persistedTask);
             }
             database.setTransactionSuccessful();
         }
@@ -116,7 +121,7 @@ public class CommandPersistenceProvider implements PersistenceProvider
     }
 
     @Override
-    public Collection<Command> loadPersistedCommands()throws SuperbusProcessException
+    public Collection<PersistedTask> loadPersistedCommands() throws SuperbusProcessException
     {
         try
         {
@@ -129,16 +134,16 @@ public class CommandPersistenceProvider implements PersistenceProvider
             {
                 CursorIntf cursor = db.query(TABLE_NAME, COLUMN_LIST);
 
-                List<Command> commands = null;
+                List<PersistedTask> persistedTasks = null;
                 try
                 {
-                    commands = new ArrayList<Command>();
+                    persistedTasks = new ArrayList<PersistedTask>();
 
                     while (cursor.moveToNext())
                     {
-                        Command command = loadFromCursor(cursor);
-                        if(command != null)
-                            commands.add(command);
+                        PersistedTask persistedTask = loadFromCursor(cursor);
+                        if (persistedTask != null)
+                            persistedTasks.add(persistedTask);
                     }
                 }
                 finally
@@ -148,7 +153,7 @@ public class CommandPersistenceProvider implements PersistenceProvider
 
                 db.setTransactionSuccessful();
 
-                return commands;
+                return persistedTasks;
             }
             finally
             {
@@ -170,8 +175,8 @@ public class CommandPersistenceProvider implements PersistenceProvider
         }
         catch (Exception e)
         {
-            if(e instanceof SuperbusProcessException)
-                throw (SuperbusProcessException)e;
+            if (e instanceof SuperbusProcessException)
+                throw (SuperbusProcessException) e;
             else
                 throw new SuperbusProcessException(e);
         }
@@ -194,20 +199,20 @@ public class CommandPersistenceProvider implements PersistenceProvider
         }
     }
 
-    private ContentValues prepCommandSave(Command command) throws SuperbusProcessException
+    private ContentValues prepCommandSave(PersistedTask persistedTask) throws SuperbusProcessException
     {
-        String commandData = storedCommandAdapter.storeCommand(command);
+        String commandData = storedCommandAdapter.storeCommand(persistedTask);
 
         ContentValues values = new ContentValues();
 
-        values.put("type", command.getClass().getName());
+        values.put("type", persistedTask.getClass().getName());
         values.put("commandData", commandData);
         return values;
     }
 
-    protected void checkNoArg(Command command)throws SuperbusProcessException
+    protected void checkNoArg(PersistedTask persistedTask) throws SuperbusProcessException
     {
-        Class<? extends Command> commandClass = command.getClass();
+        Class<? extends PersistedTask> commandClass = persistedTask.getClass();
 
         if (checkedCommandClasses.contains(commandClass))
             return;
@@ -231,7 +236,7 @@ public class CommandPersistenceProvider implements PersistenceProvider
         checkedCommandClasses.add(commandClass);
     }
 
-    private Command loadFromCursor(CursorIntf c) throws SuperbusProcessException
+    private PersistedTask loadFromCursor(CursorIntf c) throws SuperbusProcessException
     {
         try
         {
@@ -239,21 +244,21 @@ public class CommandPersistenceProvider implements PersistenceProvider
             String type = c.getString(1);
             String commandData = c.getString(2);
 
-            Command storedCommand = storedCommandAdapter.inflateCommand(commandData, type);
+            PersistedTask storedPersistedTask = storedCommandAdapter.inflateCommand(commandData, type);
 
-            storedCommand.setId(id);
+            storedPersistedTask.setId(id);
 
-            return storedCommand;
+            return storedPersistedTask;
         }
         catch (Exception e)
         {
-            if(e instanceof ClassNotFoundException)
+            if (e instanceof ClassNotFoundException)
             {
                 log.e(PersistedTaskQueue.TAG, "Class cast on load. Nothing to do here. Be more careful.", e);
                 return null;
             }
-            else if(e instanceof SuperbusProcessException)
-                throw (SuperbusProcessException)e;
+            else if (e instanceof SuperbusProcessException)
+                throw (SuperbusProcessException) e;
             else
                 throw new SuperbusProcessException(e);
         }
@@ -261,11 +266,11 @@ public class CommandPersistenceProvider implements PersistenceProvider
 
     public static void createTables(SQLiteDatabaseIntf database)
     {
-        database.execSQL("create table "+ TABLE_NAME +" ("+ COLUMNS +")");
+        database.execSQL("create table " + TABLE_NAME + " (" + COLUMNS + ")");
     }
 
     public static void dropTables(SQLiteDatabaseIntf database) throws SuperbusProcessException
     {
-        database.execSQL("drop table "+ TABLE_NAME);
+        database.execSQL("drop table " + TABLE_NAME);
     }
 }

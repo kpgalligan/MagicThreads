@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.Handler;
 
 /**
- *
  * Created by kgalligan on 7/4/14.
  */
 public class SmoothLoaderBroadcastReceiver extends LoaderBroadcastReceiver

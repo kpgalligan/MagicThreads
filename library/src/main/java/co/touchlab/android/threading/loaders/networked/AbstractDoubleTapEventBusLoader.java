@@ -1,6 +1,7 @@
 package co.touchlab.android.threading.loaders.networked;
 
 import android.content.Context;
+
 import co.touchlab.android.threading.eventbus.EventBusExt;
 import de.greenrobot.event.EventBus;
 
