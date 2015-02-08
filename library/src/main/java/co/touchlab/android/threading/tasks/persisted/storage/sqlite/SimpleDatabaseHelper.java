@@ -3,6 +3,7 @@ package co.touchlab.android.threading.tasks.persisted.storage.sqlite;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+
 import co.touchlab.android.threading.tasks.persisted.CommandPersistenceProvider;
 
 /**

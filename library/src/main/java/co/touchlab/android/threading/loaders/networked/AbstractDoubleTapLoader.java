@@ -1,6 +1,7 @@
 package co.touchlab.android.threading.loaders.networked;
 
 import android.content.Context;
+
 import co.touchlab.android.threading.eventbus.EventBusExt;
 import co.touchlab.android.threading.loaders.AbstractDataLoader;
 import co.touchlab.android.threading.tasks.TaskQueue;
@@ -23,13 +24,14 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
     private boolean remoteReturned;
     private E remoteError;
     private final TaskQueue loaderQueue;
+    private final PrivateEventRegistration privateEventRegistration = new PrivateEventRegistration();
 
     public AbstractDoubleTapLoader(Context context)
     {
         super(context);
         stickyTaskManager = new StickyTaskManager(null);
-        loaderQueue = TaskQueue.loadQueue("LOADER_QUEUE");
-        EventBusExt.getDefault().register(this);
+        loaderQueue = TaskQueue.loadQueue(context, "LOADER_QUEUE");
+        EventBusExt.getDefault().register(privateEventRegistration);
     }
 
     class StickyRemoteDataTask extends StickyTask
@@ -57,9 +59,21 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         }
 
         @Override
-        protected boolean handleError(Throwable e)
+        protected boolean handleError(Context context, Throwable e)
         {
             return false;
+        }
+    }
+
+    class PrivateEventRegistration
+    {
+        @SuppressWarnings("UnusedDeclaration")
+        public void onEventMainThread(StickyRemoteDataTask task)
+        {
+            if (stickyTaskManager.isTaskForMe(task))
+            {
+                onContentChanged();
+            }
         }
     }
 
@@ -67,16 +81,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
     protected void onReleaseResources(DoubleTapResult<D, E> data)
     {
         super.onReleaseResources(data);
-        EventBusExt.getDefault().unregister(this);
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    public void onEventMainThread(StickyRemoteDataTask task)
-    {
-        if(stickyTaskManager.isTaskForMe(task))
-        {
-            onContentChanged();
-        }
+        EventBusExt.getDefault().unregister(privateEventRegistration);
     }
 
     @Override
@@ -86,7 +91,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         {
             remoteCalled = true;
             StickyRemoteDataTask stickyRemoteDataTask = new StickyRemoteDataTask(stickyTaskManager);
-            loaderQueue.execute(getContext(), stickyRemoteDataTask);
+            loaderQueue.execute(stickyRemoteDataTask);
         }
 
         D localContent = findLocalContent();

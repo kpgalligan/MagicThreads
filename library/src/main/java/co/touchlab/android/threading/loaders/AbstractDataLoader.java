@@ -8,7 +8,7 @@ import java.io.PrintWriter;
 
 /**
  * Base loader to support non-ContentProvider loaders.
- *
+ * <p/>
  * Created by kgalligan on 7/4/14.
  */
 public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
@@ -103,10 +103,10 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
         }
         catch (Exception e)
         {
-            if(!handleError(e))
+            if (!handleError(e))
             {
-                if(e instanceof RuntimeException)
-                    throw (RuntimeException)e;
+                if (e instanceof RuntimeException)
+                    throw (RuntimeException) e;
 
                 throw new RuntimeException(e);
             }
@@ -114,7 +114,7 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
 
 //        if (localData != null)
 //        {
-            callRegister();
+        callRegister();
 //        }
 
         return localData;
@@ -122,7 +122,7 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
 
     private synchronized void callRegister()
     {
-        if(!registered)
+        if (!registered)
         {
             registered = true;
             registerContentChangedObserver();
@@ -131,16 +131,19 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
 
     private synchronized void callUnregister()
     {
-        if(registered)
+        if (registered)
         {
             registered = false;
             unregisterContentChangedObserver();
         }
     }
 
-    protected abstract D findContent()throws Exception;
+    protected abstract D findContent() throws Exception;
+
     protected abstract boolean handleError(Exception e);
+
     protected abstract void registerContentChangedObserver();
+
     protected abstract void unregisterContentChangedObserver();
 
     protected void onReleaseResources(D data)

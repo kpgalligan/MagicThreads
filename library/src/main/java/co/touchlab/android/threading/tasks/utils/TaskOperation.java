@@ -1,11 +1,12 @@
 package co.touchlab.android.threading.tasks.utils;
 
 import android.view.View;
-import co.touchlab.android.threading.tasks.TaskQueue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import co.touchlab.android.threading.tasks.TaskQueue;
 
 /**
  * Created by kgalligan on 10/11/14.
@@ -106,7 +107,7 @@ public class TaskOperation
         {
             int hideState = hideGone ? View.GONE : View.INVISIBLE;
             int vis;
-            if(normallyShown)
+            if (normallyShown)
             {
                 vis = found ? hideState : View.VISIBLE;
             }

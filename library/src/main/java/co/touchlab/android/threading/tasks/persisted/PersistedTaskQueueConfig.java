@@ -1,13 +1,14 @@
 package co.touchlab.android.threading.tasks.persisted;
 
 import android.content.Context;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.ClearSQLiteDatabase;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseFactory;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseIntf;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SimpleDatabaseHelper;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -71,7 +72,7 @@ public class PersistedTaskQueueConfig
 
             if (config.persistenceProvider == null)
                 config.persistenceProvider = new CommandPersistenceProvider(
-                    new LocalDatabaseFactory(context)
+                        new LocalDatabaseFactory(context)
                 );
 
             PersistedTaskQueueConfig retConfig = config;

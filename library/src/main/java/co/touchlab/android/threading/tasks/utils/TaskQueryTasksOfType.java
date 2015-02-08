@@ -11,14 +11,15 @@ public class TaskQueryTasksOfType implements TaskQueue.QueueQuery
     public boolean found;
     private Class cls;
 
-    public TaskQueryTasksOfType(Class cls) {
+    public TaskQueryTasksOfType(Class cls)
+    {
         this.cls = cls;
     }
 
     @Override
     public void query(Task task)
     {
-        if(task.getClass().equals(cls))
+        if (task.getClass().equals(cls))
         {
             found = true;
         }

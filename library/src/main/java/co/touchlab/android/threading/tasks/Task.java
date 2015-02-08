@@ -7,7 +7,7 @@ import android.content.Context;
  */
 public abstract class Task
 {
-    protected abstract void run(Context context) throws Exception;
+    protected abstract void run(Context context) throws Throwable;
 
     /**
      * Handle Exception that occurred during processing.  Return true if handled, false if not.  If not handled, app will throw and probably crash.
@@ -15,7 +15,7 @@ public abstract class Task
      * @param e
      * @return true if handled, false if not (which will throw it)
      */
-    protected abstract boolean handleError(Throwable e);
+    protected abstract boolean handleError(Context context, Throwable e);
 
     /**
      * Post result to EventBus (or whatever).  This will happen after all queue orchestration is
