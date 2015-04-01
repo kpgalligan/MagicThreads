@@ -24,14 +24,14 @@ import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDataba
  */
 public class CommandPersistenceProvider implements PersistenceProvider
 {
-    public static final String TABLE_NAME = "__SQL_PERS_PROV";
-    public static final String COLUMNS = "id INTEGER PRIMARY KEY AUTOINCREMENT, type VARCHAR, commandData VARCHAR";
+    public static final String   TABLE_NAME  = "__SQL_PERS_PROV";
+    public static final String   COLUMNS     = "id INTEGER PRIMARY KEY AUTOINCREMENT, type VARCHAR, commandData VARCHAR";
     public static final String[] COLUMN_LIST = {"id", "type", "commandData"};
 
     private Set<Class> checkedCommandClasses = new HashSet<Class>();
-    private BusLog log;
+    private BusLog                log;
     private SQLiteDatabaseFactory databaseFactory;
-    private StoredCommandAdapter storedCommandAdapter;
+    private StoredCommandAdapter  storedCommandAdapter;
 
     public CommandPersistenceProvider(SQLiteDatabaseFactory databaseFactory)
     {
@@ -47,7 +47,9 @@ public class CommandPersistenceProvider implements PersistenceProvider
     {
         this.databaseFactory = databaseFactory;
         this.storedCommandAdapter = storedCommandAdapter;
-        this.log = log == null ? new BusLogImpl() : log;
+        this.log = log == null
+                ? new BusLogImpl()
+                : log;
     }
 
     @Override
@@ -55,16 +57,24 @@ public class CommandPersistenceProvider implements PersistenceProvider
     {
         try
         {
-            int removedCount = databaseFactory.getDatabase().delete(TABLE_NAME, "id = ?", new String[]{persistedTask.getId().toString()});
-            if (removedCount != 1)
+            int removedCount = databaseFactory.getDatabase().delete(TABLE_NAME, "id = ?",
+                                                                    new String[] {persistedTask
+                                                                            .getId().toString()});
+            if(removedCount != 1)
+            {
                 log.e(PersistedTaskQueue.TAG, "Deleted count != 1, was " + removedCount);
+            }
         }
-        catch (Exception e)
+        catch(Exception e)
         {
-            if (e instanceof SuperbusProcessException)
+            if(e instanceof SuperbusProcessException)
+            {
                 throw (SuperbusProcessException) e;
+            }
             else
+            {
                 throw new SuperbusProcessException(e);
+            }
         }
     }
 
@@ -78,24 +88,25 @@ public class CommandPersistenceProvider implements PersistenceProvider
         {
             ContentValues values = prepCommandSave(persistedTask);
 
-            if (persistedTask.getId() == null)
+            if(persistedTask.getId() == null)
             {
-                long newRowId = databaseFactory.getDatabase().insertOrThrow(
-                        TABLE_NAME, "type", values
-                );
+                long newRowId = databaseFactory.getDatabase()
+                                               .insertOrThrow(TABLE_NAME, "type", values);
 
                 persistedTask.setId(newRowId);
             }
             else
             {
-                databaseFactory.getDatabase().update(TABLE_NAME, values, "id = ?", new String[]{persistedTask.getId().toString()});
+                databaseFactory.getDatabase().update(TABLE_NAME, values, "id = ?",
+                                                     new String[] {persistedTask.getId()
+                                                                                .toString()});
             }
         }
-        catch (SuperbusProcessException e)
+        catch(SuperbusProcessException e)
         {
             throw e;
         }
-        catch (Exception e)
+        catch(Exception e)
         {
             throw new SuperbusProcessException(e);
         }
@@ -108,7 +119,7 @@ public class CommandPersistenceProvider implements PersistenceProvider
         try
         {
             database.beginTransaction();
-            for (PersistedTask persistedTask : persistedTasks)
+            for(PersistedTask persistedTask : persistedTasks)
             {
                 saveCommand(persistedTask);
             }
@@ -139,11 +150,13 @@ public class CommandPersistenceProvider implements PersistenceProvider
                 {
                     persistedTasks = new ArrayList<PersistedTask>();
 
-                    while (cursor.moveToNext())
+                    while(cursor.moveToNext())
                     {
                         PersistedTask persistedTask = loadFromCursor(cursor);
-                        if (persistedTask != null)
+                        if(persistedTask != null)
+                        {
                             persistedTasks.add(persistedTask);
+                        }
                     }
                 }
                 finally
@@ -160,7 +173,7 @@ public class CommandPersistenceProvider implements PersistenceProvider
                 db.endTransaction();
             }
         }
-        catch (Exception e)
+        catch(Exception e)
         {
             throw new SuperbusProcessException(e);
         }
@@ -173,12 +186,16 @@ public class CommandPersistenceProvider implements PersistenceProvider
         {
             databaseFactory.getDatabase().delete(TABLE_NAME, null, null);
         }
-        catch (Exception e)
+        catch(Exception e)
         {
-            if (e instanceof SuperbusProcessException)
+            if(e instanceof SuperbusProcessException)
+            {
                 throw (SuperbusProcessException) e;
+            }
             else
+            {
                 throw new SuperbusProcessException(e);
+            }
         }
     }
 
@@ -214,24 +231,29 @@ public class CommandPersistenceProvider implements PersistenceProvider
     {
         Class<? extends PersistedTask> commandClass = persistedTask.getClass();
 
-        if (checkedCommandClasses.contains(commandClass))
+        if(checkedCommandClasses.contains(commandClass))
+        {
             return;
+        }
 
         boolean isNoArg = false;
 
         Constructor<?>[] constructors = commandClass.getConstructors();
 
-        for (Constructor<?> constructor : constructors)
+        for(Constructor<?> constructor : constructors)
         {
-            if (constructor.getParameterTypes().length == 0)
+            if(constructor.getParameterTypes().length == 0)
             {
                 isNoArg = true;
                 break;
             }
         }
 
-        if (!isNoArg)
-            throw new SuperbusProcessException("All StoredCommand classes must have a no-arg constructor");
+        if(! isNoArg)
+        {
+            throw new SuperbusProcessException(
+                    "All StoredCommand classes must have a no-arg constructor");
+        }
 
         checkedCommandClasses.add(commandClass);
     }
@@ -244,23 +266,29 @@ public class CommandPersistenceProvider implements PersistenceProvider
             String type = c.getString(1);
             String commandData = c.getString(2);
 
-            PersistedTask storedPersistedTask = storedCommandAdapter.inflateCommand(commandData, type);
+            PersistedTask storedPersistedTask = storedCommandAdapter
+                    .inflateCommand(commandData, type);
 
             storedPersistedTask.setId(id);
 
             return storedPersistedTask;
         }
-        catch (Exception e)
+        catch(Exception e)
         {
-            if (e instanceof ClassNotFoundException)
+            if(e instanceof ClassNotFoundException)
             {
-                log.e(PersistedTaskQueue.TAG, "Class cast on load. Nothing to do here. Be more careful.", e);
+                log.e(PersistedTaskQueue.TAG,
+                      "Class cast on load. Nothing to do here. Be more careful.", e);
                 return null;
             }
-            else if (e instanceof SuperbusProcessException)
+            else if(e instanceof SuperbusProcessException)
+            {
                 throw (SuperbusProcessException) e;
+            }
             else
+            {
                 throw new SuperbusProcessException(e);
+            }
         }
     }
 

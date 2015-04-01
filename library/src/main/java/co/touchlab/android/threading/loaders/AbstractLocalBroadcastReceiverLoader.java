@@ -9,7 +9,7 @@ import android.support.v4.content.LocalBroadcastManager;
  * <p/>
  * Created by kgalligan on 7/4/14.
  */
-public abstract class AbstractLocalBroadcastReceiverLoader<D> extends AbstractDataLoader<D>
+public abstract class AbstractLocalBroadcastReceiverLoader <D> extends AbstractDataLoader<D>
 {
     private LoaderBroadcastReceiver loaderBroadcastReceiver = null;
 
@@ -26,22 +26,25 @@ public abstract class AbstractLocalBroadcastReceiverLoader<D> extends AbstractDa
     protected String[] getBroadcastStrings()
     {
         String broadcastString = getBroadcastString();
-        return broadcastString == null ? new String[]{} : new String[]{broadcastString};
+        return broadcastString == null
+                ? new String[] {}
+                : new String[] {broadcastString};
     }
 
     @Override
     protected void registerContentChangedObserver()
     {
         String[] broadcastStrings = getBroadcastStrings();
-        if (loaderBroadcastReceiver == null && broadcastStrings.length > 0)
+        if(loaderBroadcastReceiver == null && broadcastStrings.length > 0)
         {
             loaderBroadcastReceiver = createLoaderBroadcastReceiver();
             IntentFilter filter = new IntentFilter();
-            for (String s : broadcastStrings)
+            for(String s : broadcastStrings)
             {
                 filter.addAction(s);
             }
-            LocalBroadcastManager.getInstance(getContext()).registerReceiver(loaderBroadcastReceiver, filter);
+            LocalBroadcastManager.getInstance(getContext())
+                                 .registerReceiver(loaderBroadcastReceiver, filter);
         }
     }
 
@@ -53,9 +56,10 @@ public abstract class AbstractLocalBroadcastReceiverLoader<D> extends AbstractDa
     @Override
     protected void unregisterContentChangedObserver()
     {
-        if (loaderBroadcastReceiver != null)
+        if(loaderBroadcastReceiver != null)
         {
-            LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(loaderBroadcastReceiver);
+            LocalBroadcastManager.getInstance(getContext())
+                                 .unregisterReceiver(loaderBroadcastReceiver);
             loaderBroadcastReceiver = null;
         }
     }

@@ -6,9 +6,9 @@ import android.os.Looper;
 import android.os.Message;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -20,28 +20,40 @@ import co.touchlab.android.threading.utils.UiThreadContext;
  */
 public abstract class BaseTaskQueue
 {
-    protected Application application;
-    protected final Handler handler;
-    protected Queue<Task> tasks;
-    private Task currentTask;
+    protected final Application        application;
+    protected final Handler            handler;
+    protected final QueueWrapper<Task> tasks;
+    private         Task               currentTask;
 
-    protected final ExecutorService executorService = Executors.newSingleThreadExecutor(new ThreadFactory()
-    {
-        @Override
-        public Thread newThread(Runnable r)
-        {
-            return new Thread(r);
-        }
-    });
+    protected final ExecutorService executorService = Executors
+            .newSingleThreadExecutor(new ThreadFactory()
+            {
+                @Override
+                public Thread newThread(Runnable r)
+                {
+                    return new Thread(r);
+                }
+            });
 
-    private List<QueueListener> listeners = new ArrayList<QueueListener>();
-    private boolean startedCalled = false;
+    private List<QueueListener> listeners     = new ArrayList<QueueListener>();
+    private boolean             startedCalled = false;
 
-    public BaseTaskQueue(Application application)
+    public BaseTaskQueue(Application application, QueueWrapper<Task> queueWrapper)
     {
         this.application = application;
+        tasks = queueWrapper;
         handler = new QueueHandler(Looper.getMainLooper());
-        tasks = createQueue();
+    }
+
+    protected interface QueueWrapper <T>
+    {
+        T poll();
+
+        void offer(T task);
+
+        Collection<T> all();
+
+        void remove(T task);
     }
 
     public void addListener(QueueListener listener)
@@ -63,6 +75,11 @@ public abstract class BaseTaskQueue
         resetPollRunnable();
     }
 
+    public void remove(Task task)
+    {
+        tasks.remove(task);
+    }
+
     protected void resetPollRunnable()
     {
         handler.removeMessages(QueueHandler.POLL_TASK);
@@ -71,10 +88,10 @@ public abstract class BaseTaskQueue
 
     protected class QueueHandler extends Handler
     {
-        static final int INSERT_TASK = 0;
-        static final int POLL_TASK = 1;
-        public static final int POST_EXE = 2;
-        static final int THROW = 3;
+        static final        int INSERT_TASK = 0;
+        static final        int POLL_TASK   = 1;
+        public static final int POST_EXE    = 2;
+        static final        int THROW       = 3;
 
         private QueueHandler(Looper looper)
         {
@@ -84,28 +101,30 @@ public abstract class BaseTaskQueue
         @Override
         public void handleMessage(Message msg)
         {
-            switch (msg.what)
+            switch(msg.what)
             {
                 case INSERT_TASK:
                     insertTask((Task) msg.obj);
                     break;
                 case POLL_TASK:
-                    if (currentTask != null)
+                    if(currentTask != null)
+                    {
                         return;
+                    }
 
                     Task task = tasks.poll();
-                    if (task != null)
+                    if(task != null)
                     {
                         currentTask = task;
-                        if(!startedCalled)
+                        if(! startedCalled)
                         {
                             startedCalled = true;
-                            for (QueueListener listener : listeners)
+                            for(QueueListener listener : listeners)
                             {
                                 listener.queueStarted();
                             }
                         }
-                        for (QueueListener listener : listeners)
+                        for(QueueListener listener : listeners)
                         {
                             listener.taskStarted(task);
                         }
@@ -121,19 +140,25 @@ public abstract class BaseTaskQueue
                     Task tempTask = currentTask;
                     currentTask = null;
                     finishTask(msg, tempTask);
-                    for (QueueListener listener : listeners)
+                    for(QueueListener listener : listeners)
                     {
                         listener.taskFinished(tempTask);
                     }
                     break;
                 case THROW:
                     Throwable cause = (Throwable) msg.obj;
-                    if (cause instanceof RuntimeException)
+                    if(cause instanceof RuntimeException)
+                    {
                         throw (RuntimeException) cause;
-                    else if (cause instanceof Error)
+                    }
+                    else if(cause instanceof Error)
+                    {
                         throw (Error) cause;
+                    }
                     else
+                    {
                         throw new RuntimeException(cause);
+                    }
                 default:
                     otherOperations(msg);
             }
@@ -142,7 +167,7 @@ public abstract class BaseTaskQueue
 
     protected void callQueueFinished()
     {
-        for (QueueListener listener : listeners)
+        for(QueueListener listener : listeners)
         {
             listener.queueFinished();
         }
@@ -152,9 +177,9 @@ public abstract class BaseTaskQueue
     {
         UiThreadContext.assertUiThread();
 
-        PriorityQueue<Task> commands = new PriorityQueue<Task>(tasks);
+        PriorityQueue<Task> commands = new PriorityQueue<Task>(tasks.all());
         List<Task> commandList = new ArrayList<Task>();
-        while (!commands.isEmpty())
+        while(! commands.isEmpty())
         {
             commandList.add(commands.poll());
         }
@@ -164,7 +189,7 @@ public abstract class BaseTaskQueue
     public static class TaskQueueState
     {
         List<Task> queued;
-        Task currentTask;
+        Task       currentTask;
 
         public TaskQueueState(List<Task> queued, Task currentTask)
         {
@@ -183,8 +208,6 @@ public abstract class BaseTaskQueue
         }
     }
 
-    protected abstract Queue<Task> createQueue();
-
     protected abstract void runTask(Task task);
 
     protected abstract void finishTask(Message msg, Task task);
@@ -196,14 +219,17 @@ public abstract class BaseTaskQueue
 
     public interface QueueQuery
     {
-        void query(Task task);
+        void query(BaseTaskQueue queue, Task task);
     }
 
     public interface QueueListener
     {
         void queueStarted();
+
         void queueFinished();
+
         void taskStarted(Task task);
+
         void taskFinished(Task task);
     }
 
@@ -216,12 +242,14 @@ public abstract class BaseTaskQueue
     {
         UiThreadContext.assertUiThread();
 
-        for (Task task : tasks)
+        for(Task task : tasks.all())
         {
-            queueQuery.query(task);
+            queueQuery.query(this, task);
         }
 
-        if (currentTask != null)
-            queueQuery.query(currentTask);
+        if(currentTask != null)
+        {
+            queueQuery.query(this, currentTask);
+        }
     }
 }

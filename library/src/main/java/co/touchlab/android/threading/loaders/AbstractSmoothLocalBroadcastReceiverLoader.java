@@ -8,7 +8,7 @@ import android.content.Context;
  * <p/>
  * Created by kgalligan on 7/4/14.
  */
-public abstract class AbstractSmoothLocalBroadcastReceiverLoader<D> extends AbstractLocalBroadcastReceiverLoader<D>
+public abstract class AbstractSmoothLocalBroadcastReceiverLoader <D> extends AbstractLocalBroadcastReceiverLoader<D>
 {
     public AbstractSmoothLocalBroadcastReceiverLoader(Context context)
     {

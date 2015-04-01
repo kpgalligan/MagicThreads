@@ -1,5 +1,6 @@
 package co.touchlab.android.threading.tasks.utils;
 
+import co.touchlab.android.threading.tasks.BaseTaskQueue;
 import co.touchlab.android.threading.tasks.Task;
 import co.touchlab.android.threading.tasks.TaskQueue;
 
@@ -8,8 +9,8 @@ import co.touchlab.android.threading.tasks.TaskQueue;
  */
 public class TaskQueryTasksOfType implements TaskQueue.QueueQuery
 {
-    public boolean found;
-    private Class cls;
+    public  boolean found;
+    private Class   cls;
 
     public TaskQueryTasksOfType(Class cls)
     {
@@ -17,9 +18,9 @@ public class TaskQueryTasksOfType implements TaskQueue.QueueQuery
     }
 
     @Override
-    public void query(Task task)
+    public void query(BaseTaskQueue queue, Task task)
     {
-        if (task.getClass().equals(cls))
+        if(task.getClass().equals(cls))
         {
             found = true;
         }

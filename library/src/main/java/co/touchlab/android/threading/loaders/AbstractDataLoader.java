@@ -11,9 +11,9 @@ import java.io.PrintWriter;
  * <p/>
  * Created by kgalligan on 7/4/14.
  */
-public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
+public abstract class AbstractDataLoader <D> extends AsyncTaskLoader<D>
 {
-    private D data;
+    private D       data;
     private boolean registered;
 
     public AbstractDataLoader(Context context)
@@ -31,12 +31,12 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
     @Override
     protected void onStartLoading()
     {
-        if (data != null)
+        if(data != null)
         {
             deliverResult(data);
         }
 
-        if (takeContentChanged() || data == null)
+        if(takeContentChanged() || data == null)
         {
             forceLoad();
         }
@@ -46,7 +46,7 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
     @Override
     public void deliverResult(D newData)
     {
-        if (isReset())
+        if(isReset())
         {
             return;
         }
@@ -54,12 +54,12 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
         D oldData = this.data;
         data = newData;
 
-        if (isStarted())
+        if(isStarted())
         {
             super.deliverResult(newData);
         }
 
-        if (oldData != null)
+        if(oldData != null)
         {
             onReleaseResources(oldData);
         }
@@ -83,7 +83,7 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
         // Ensure the loader is stopped
         onStopLoading();
 
-        if (data != null)
+        if(data != null)
         {
             onReleaseResources(data);
             data = null;
@@ -101,28 +101,30 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
         {
             localData = findContent();
         }
-        catch (Exception e)
+        catch(Exception e)
         {
-            if (!handleError(e))
+            if(! handleError(e))
             {
-                if (e instanceof RuntimeException)
+                if(e instanceof RuntimeException)
+                {
                     throw (RuntimeException) e;
+                }
 
                 throw new RuntimeException(e);
             }
         }
 
-//        if (localData != null)
-//        {
+        //        if (localData != null)
+        //        {
         callRegister();
-//        }
+        //        }
 
         return localData;
     }
 
     private synchronized void callRegister()
     {
-        if (!registered)
+        if(! registered)
         {
             registered = true;
             registerContentChangedObserver();
@@ -131,7 +133,7 @@ public abstract class AbstractDataLoader<D> extends AsyncTaskLoader<D>
 
     private synchronized void callUnregister()
     {
-        if (registered)
+        if(registered)
         {
             registered = false;
             unregisterContentChangedObserver();

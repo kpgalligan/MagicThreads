@@ -21,7 +21,7 @@ public class SimpleDatabaseHelper extends SQLiteOpenHelper
 
     public static synchronized SimpleDatabaseHelper getInstance(Context context, String fileName)
     {
-        if (INSTANCE == null)
+        if(INSTANCE == null)
         {
             INSTANCE = new SimpleDatabaseHelper(context.getApplicationContext(), fileName);
         }

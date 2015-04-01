@@ -26,11 +26,11 @@ public class GsonStoredCommandAdapter implements StoredCommandAdapter
             Object returnedCommand = gson.fromJson(data, Class.forName(className));
             return (PersistedTask) returnedCommand;
         }
-        catch (ClassNotFoundException e)
+        catch(ClassNotFoundException e)
         {
             throw e;
         }
-        catch (Exception e)
+        catch(Exception e)
         {
             throw new SuperbusProcessException(e);
         }
@@ -39,7 +39,7 @@ public class GsonStoredCommandAdapter implements StoredCommandAdapter
     private Gson gsonForThread()
     {
         Gson gson = gsonThreadLocal.get();
-        if (gson == null)
+        if(gson == null)
         {
             gson = new Gson();
             gsonThreadLocal.set(gson);
@@ -54,7 +54,7 @@ public class GsonStoredCommandAdapter implements StoredCommandAdapter
         {
             return gsonForThread().toJson(persistedTask, persistedTask.getClass());
         }
-        catch (Exception e)
+        catch(Exception e)
         {
             throw new SuperbusProcessException(e);
         }

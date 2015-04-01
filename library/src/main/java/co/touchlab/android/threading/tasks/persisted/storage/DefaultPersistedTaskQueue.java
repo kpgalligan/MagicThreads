@@ -16,14 +16,14 @@ public class DefaultPersistedTaskQueue
 
     public static synchronized PersistedTaskQueue getInstance(Context context)
     {
-        if (INSTANCE == null)
+        if(INSTANCE == null)
         {
             PersistedTaskQueueConfig build = null;
             try
             {
                 build = new PersistedTaskQueueConfig.Builder().build(context);
             }
-            catch (ConfigException e)
+            catch(ConfigException e)
             {
                 throw new RuntimeException(e);
             }

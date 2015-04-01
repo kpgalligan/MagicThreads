@@ -17,13 +17,13 @@ import co.touchlab.android.threading.tasks.sticky.StickyTaskManager;
  * Created by kgalligan on 7/29/14.
  * TODO: Need error delivery
  */
-public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<DoubleTapResult<D, E>>
+public abstract class AbstractDoubleTapLoader <D, E> extends AbstractDataLoader<DoubleTapResult<D, E>>
 {
-    private StickyTaskManager stickyTaskManager;
-    private boolean remoteCalled;
-    private boolean remoteReturned;
-    private E remoteError;
-    private final TaskQueue loaderQueue;
+    private       StickyTaskManager stickyTaskManager;
+    private       boolean           remoteCalled;
+    private       boolean           remoteReturned;
+    private       E                 remoteError;
+    private final TaskQueue         loaderQueue;
     private final PrivateEventRegistration privateEventRegistration = new PrivateEventRegistration();
 
     public AbstractDoubleTapLoader(Context context)
@@ -45,7 +45,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         protected void run(Context context) throws Exception
         {
             E theError = findRemoteContent();
-            synchronized (AbstractDoubleTapLoader.this)
+            synchronized(AbstractDoubleTapLoader.this)
             {
                 remoteError = theError;
                 remoteReturned = true;
@@ -70,7 +70,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         @SuppressWarnings("UnusedDeclaration")
         public void onEventMainThread(StickyRemoteDataTask task)
         {
-            if (stickyTaskManager.isTaskForMe(task))
+            if(stickyTaskManager.isTaskForMe(task))
             {
                 onContentChanged();
             }
@@ -87,7 +87,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
     @Override
     protected final DoubleTapResult<D, E> findContent() throws Exception
     {
-        if (!remoteCalled)
+        if(! remoteCalled)
         {
             remoteCalled = true;
             StickyRemoteDataTask stickyRemoteDataTask = new StickyRemoteDataTask(stickyTaskManager);
@@ -99,7 +99,7 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
         boolean remoteDone;
         E e;
 
-        synchronized (this)
+        synchronized(this)
         {
             remoteDone = remoteReturned;
             e = remoteError;
@@ -107,22 +107,26 @@ public abstract class AbstractDoubleTapLoader<D, E> extends AbstractDataLoader<D
 
         boolean remoteError = e != null;
 
-        if (localFound)
+        if(localFound)
         {
             return new DoubleTapResult<D, E>(DoubleTapResult.Status.Data, localContent, null);
         }
         else
         {
-            if (!remoteDone)
+            if(! remoteDone)
             {
                 return new DoubleTapResult<D, E>(DoubleTapResult.Status.Waiting, null, null);
             }
             else
             {
-                if (remoteError)
+                if(remoteError)
+                {
                     return new DoubleTapResult<D, E>(DoubleTapResult.Status.Error, null, e);
+                }
                 else
+                {
                     return new DoubleTapResult<D, E>(DoubleTapResult.Status.NoData, null, null);
+                }
             }
         }
     }

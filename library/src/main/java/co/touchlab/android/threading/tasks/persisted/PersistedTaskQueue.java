@@ -23,19 +23,19 @@ public class PersistedTaskQueue extends BaseTaskQueue
     public static final String TAG = PersistedTaskQueue.class.getSimpleName();
 
     static final int START_PERSISTING_TASK = 200;
-    static final int PERSIST_ALL_ADDING = 300;
-    static final int TRIGGER_PENDING = 400;
+    static final int PERSIST_ALL_ADDING    = 300;
+    static final int TRIGGER_PENDING       = 400;
 
-    private Queue<PersistedTask> addingTasks = new LinkedList<PersistedTask>();
+    private Queue<PersistedTask> addingTasks  = new LinkedList<PersistedTask>();
     private Queue<PersistedTask> pendingTasks = new LinkedList<PersistedTask>();
 
     private PersistenceProvider provider;
-    private CommandPurgePolicy commandPurgePolicy;
-    private BusLog log;
+    private CommandPurgePolicy  commandPurgePolicy;
+    private BusLog              log;
 
     public PersistedTaskQueue(Application appContext, PersistedTaskQueueConfig config)
     {
-        super(appContext);
+        super(appContext, new PriorityQueueWrapper());
         provider = config.getPersistenceProvider();
         commandPurgePolicy = config.commandPurgePolicy;
         log = config.getLog();
@@ -45,15 +45,16 @@ public class PersistedTaskQueue extends BaseTaskQueue
     @Override
     protected void otherOperations(Message msg)
     {
-        switch (msg.what)
+        switch(msg.what)
         {
             case START_PERSISTING_TASK:
                 callExecute((PersistedTask) msg.obj);
                 break;
             case PERSIST_ALL_ADDING:
-                if (!addingTasks.isEmpty())
+                if(! addingTasks.isEmpty())
                 {
-                    List<PersistedTask> copyPendingTasks = new ArrayList<PersistedTask>(addingTasks);
+                    List<PersistedTask> copyPendingTasks = new ArrayList<PersistedTask>(
+                            addingTasks);
                     pendingTasks.addAll(addingTasks);
                     addingTasks.clear();
                     runInBackground(new PersistTasksRunnable(copyPendingTasks));
@@ -62,7 +63,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
             case TRIGGER_PENDING:
                 List<PersistedTask> copyPersisted = (List<PersistedTask>) msg.obj;
                 pendingTasks.removeAll(copyPersisted);
-                tasks.addAll(copyPersisted);
+                tasks.all().addAll(copyPersisted);
                 resetPollRunnable();
                 break;
         }
@@ -75,7 +76,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
         boolean shouldReset = true;
         try
         {
-            switch (container.commandResult)
+            switch(container.commandResult)
             {
                 case Success:
                     container.c.onComplete(application);
@@ -98,8 +99,10 @@ public class PersistedTaskQueue extends BaseTaskQueue
         }
         finally
         {
-            if (shouldReset)
+            if(shouldReset)
+            {
                 resetPollRunnable();
+            }
         }
     }
 
@@ -110,7 +113,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
      */
     public void execute(final PersistedTask task)
     {
-        if (UiThreadContext.isInUiThread())
+        if(UiThreadContext.isInUiThread())
         {
             callExecute(task);
         }
@@ -126,8 +129,10 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
         boolean duplicate = checkHasDuplicate(task);
 
-        if (duplicate)
+        if(duplicate)
+        {
             return;
+        }
 
         addingTasks.add(task);
 
@@ -147,7 +152,10 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
         TaskQueueState taskQueueState = copyState();
 
-        return new PersistedTaskQueueState(new ArrayList<PersistedTask>(addingTasks), new ArrayList<PersistedTask>(pendingTasks), taskQueueState.getQueued(), taskQueueState.getCurrentTask());
+        return new PersistedTaskQueueState(new ArrayList<PersistedTask>(addingTasks),
+                                           new ArrayList<PersistedTask>(pendingTasks),
+                                           taskQueueState.getQueued(),
+                                           taskQueueState.getCurrentTask());
     }
 
 
@@ -157,11 +165,15 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
         boolean duplicate = checkCollectionHasDuplicate(c, addingTasks);
 
-        if (!duplicate)
+        if(! duplicate)
+        {
             duplicate = checkCollectionHasDuplicate(c, pendingTasks);
+        }
 
-        if (!duplicate)
-            duplicate = checkCollectionHasDuplicate(c, tasks);
+        if(! duplicate)
+        {
+            duplicate = checkCollectionHasDuplicate(c, tasks.all());
+        }
 
         return duplicate;
     }
@@ -169,9 +181,9 @@ public class PersistedTaskQueue extends BaseTaskQueue
     private boolean checkCollectionHasDuplicate(PersistedTask c, Collection collection)
     {
         //Did this because generic collection type checking was nasty
-        for (Object command : collection)
+        for(Object command : collection)
         {
-            if (command instanceof PersistedTask && c.same((PersistedTask) command))
+            if(command instanceof PersistedTask && c.same((PersistedTask) command))
             {
                 return true;
             }
@@ -196,7 +208,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
                 @Override
                 public void run()
                 {
-                    for (PersistedTask persistedTask : persistedTasks)
+                    for(PersistedTask persistedTask : persistedTasks)
                     {
                         insertTask(persistedTask);
                     }
@@ -237,7 +249,9 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
     private enum CommandResult
     {
-        Success, Transient, Permanent
+        Success,
+        Transient,
+        Permanent
     }
 
     private class ExeTask implements Runnable
@@ -263,13 +277,13 @@ public class PersistedTaskQueue extends BaseTaskQueue
                 cause = null;
                 commandResult = CommandResult.Success;
             }
-            catch (SoftException e)
+            catch(SoftException e)
             {
                 cause = e;
 
                 boolean purge = commandPurgePolicy.purgeCommandOnTransientException(c, e);
 
-                if (purge)
+                if(purge)
                 {
                     log.w(TAG, "Purging command on TransientException: {" + c.logSummary() + "}");
                     commandResult = CommandResult.Permanent;
@@ -279,16 +293,18 @@ public class PersistedTaskQueue extends BaseTaskQueue
                     commandResult = CommandResult.Transient;
                 }
             }
-            catch (Throwable e)
+            catch(Throwable e)
             {
                 cause = e;
                 commandResult = CommandResult.Permanent;
             }
 
-            if (cause != null)
+            if(cause != null)
+            {
                 log.e(TAG, null, cause);
+            }
 
-            if (commandResult == CommandResult.Success || commandResult == CommandResult.Permanent)
+            if(commandResult == CommandResult.Success || commandResult == CommandResult.Permanent)
             {
                 provider.removeCommand(c);
             }
@@ -298,7 +314,9 @@ public class PersistedTaskQueue extends BaseTaskQueue
                 provider.saveCommand(c);
             }
 
-            handler.sendMessage(handler.obtainMessage(QueueHandler.POST_EXE, new FinishTaskContainer(c, commandResult, cause)));
+            handler.sendMessage(handler.obtainMessage(QueueHandler.POST_EXE,
+                                                      new FinishTaskContainer(c, commandResult,
+                                                                              cause)));
         }
     }
 
@@ -306,7 +324,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
     {
         private final PersistedTask c;
         private final CommandResult commandResult;
-        private final Throwable cause;
+        private final Throwable     cause;
 
         private FinishTaskContainer(PersistedTask c, CommandResult commandResult, Throwable cause)
         {
@@ -325,10 +343,33 @@ public class PersistedTaskQueue extends BaseTaskQueue
         logCommandVerbose(persistedTask, "callComand-finish");
     }
 
-    @Override
-    protected Queue<Task> createQueue()
+    static class PriorityQueueWrapper implements QueueWrapper<Task>
     {
-        return new PriorityQueue<Task>();
+        private final PriorityQueue<Task> priorityQueue = new PriorityQueue<Task>();
+
+        @Override
+        public Task poll()
+        {
+            return priorityQueue.poll();
+        }
+
+        @Override
+        public void offer(Task task)
+        {
+            priorityQueue.offer(task);
+        }
+
+        @Override
+        public Collection<Task> all()
+        {
+            return priorityQueue;
+        }
+
+        @Override
+        public void remove(Task task)
+        {
+            priorityQueue.remove(task);
+        }
     }
 
     @Override
@@ -346,14 +387,14 @@ public class PersistedTaskQueue extends BaseTaskQueue
     {
         UiThreadContext.assertUiThread();
 
-        for (PersistedTask pendingTask : addingTasks)
+        for(PersistedTask pendingTask : addingTasks)
         {
-            queueQuery.query(pendingTask);
+            queueQuery.query(this, pendingTask);
         }
 
-        for (PersistedTask pendingTask : pendingTasks)
+        for(PersistedTask pendingTask : pendingTasks)
         {
-            queueQuery.query(pendingTask);
+            queueQuery.query(this, pendingTask);
         }
 
         super.query(queueQuery);
@@ -368,9 +409,10 @@ public class PersistedTaskQueue extends BaseTaskQueue
     {
         try
         {
-            log.v(TAG, methodName + ": " + persistedTask.getAdded() + " : " + persistedTask.logSummary());
+            log.v(TAG, methodName + ": " + persistedTask.getAdded() + " : " + persistedTask
+                    .logSummary());
         }
-        catch (Exception e)
+        catch(Exception e)
         {
             //Just in case...
         }
@@ -379,7 +421,9 @@ public class PersistedTaskQueue extends BaseTaskQueue
     private void logTransientException(PersistedTask c, Throwable e)
     {
         log.e(TAG, null, e);
-        SoftException pe = e instanceof SoftException ? (SoftException) e : new SoftException(e);
+        SoftException pe = e instanceof SoftException
+                ? (SoftException) e
+                : new SoftException(e);
         c.onTransientError(application, pe);
     }
 
@@ -401,13 +445,13 @@ public class PersistedTaskQueue extends BaseTaskQueue
                 {
                     r.run();
                 }
-                catch (Throwable e)
+                catch(Throwable e)
                 {
-                    if (e instanceof RuntimeException)
+                    if(e instanceof RuntimeException)
                     {
                         throw (RuntimeException) e;
                     }
-                    else if (e instanceof Error)//TODO: Intellij says this is always true, but I think its wrong...
+                    else if(e instanceof Error)//TODO: Intellij says this is always true, but I think its wrong...
                     {
                         throw (Error) e;
                     }
@@ -424,8 +468,8 @@ public class PersistedTaskQueue extends BaseTaskQueue
     {
         List<PersistedTask> adding;
         List<PersistedTask> pending;
-        List<Task> queued;
-        Task currentTask;
+        List<Task>          queued;
+        Task                currentTask;
 
         public PersistedTaskQueueState(List<PersistedTask> adding, List<PersistedTask> pending, List<Task> queued, Task currentTask)
         {

@@ -31,10 +31,10 @@ import co.touchlab.android.threading.tasks.Task;
  */
 public abstract class PersistedTask extends Task implements Comparable<PersistedTask>
 {
-    public static final int MUCH_LOWER_PRIORITY = 1;
-    public static final int LOWER_PRIORITY = 5;
-    public static final int DEFAULT_PRIORITY = 10;
-    public static final int HIGHER_PRIORITY = 15;
+    public static final int MUCH_LOWER_PRIORITY  = 1;
+    public static final int LOWER_PRIORITY       = 5;
+    public static final int DEFAULT_PRIORITY     = 10;
+    public static final int HIGHER_PRIORITY      = 15;
     public static final int MUCH_HIGHER_PRIORITY = 20;
 
     private static AtomicInteger orderTieCounter = new AtomicInteger(0);
@@ -42,8 +42,8 @@ public abstract class PersistedTask extends Task implements Comparable<Persisted
     //Init with current time. Allow override by accessors
     private long lastUpdate = System.currentTimeMillis();
 
-    private int priority = DEFAULT_PRIORITY;
-    private long added = System.currentTimeMillis();
+    private int  priority = DEFAULT_PRIORITY;
+    private long added    = System.currentTimeMillis();
 
     //Current time stamp may be the same if several commands added quickly. This will break tie.
     private int orderTie = orderTieCounter.getAndAdd(1);
@@ -127,8 +127,10 @@ public abstract class PersistedTask extends Task implements Comparable<Persisted
     protected void onPermanentError(Context context, Throwable exception)
     {
         boolean handled = handleError(context, exception);
-        if (!handled)
+        if(! handled)
+        {
             throw new SuperbusProcessException(exception);
+        }
     }
 
     /**
@@ -236,13 +238,15 @@ public abstract class PersistedTask extends Task implements Comparable<Persisted
     public int compareTo(PersistedTask persistedTask)
     {
         int priorityCompare = persistedTask.getPriority() - priority;
-        if (priorityCompare != 0)
+        if(priorityCompare != 0)
         {
             return priorityCompare;
         }
         int addedCompare = (int) (added - persistedTask.getAdded());
-        if (addedCompare != 0)
+        if(addedCompare != 0)
+        {
             return addedCompare;
+        }
 
         return orderTie - persistedTask.orderTie;
     }

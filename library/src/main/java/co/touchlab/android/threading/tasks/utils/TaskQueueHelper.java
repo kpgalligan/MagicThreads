@@ -26,7 +26,7 @@ public class TaskQueueHelper
     static class ClassesQuery implements TaskQueue.QueueQuery
     {
         boolean found = false;
-        Class[] classes;
+        Class[]           classes;
         StickyTaskManager stickyTaskManager;
 
         ClassesQuery(StickyTaskManager stickyTaskManager, Class[] classes)
@@ -36,11 +36,11 @@ public class TaskQueueHelper
         }
 
         @Override
-        public void query(Task task)
+        public void query(BaseTaskQueue queue, Task task)
         {
-            for (Class aClass : classes)
+            for(Class aClass : classes)
             {
-                if (task.getClass().equals(aClass))
+                if(task.getClass().equals(aClass))
                 {
                     if(stickyTaskManager != null && task instanceof StickyTask)
                     {

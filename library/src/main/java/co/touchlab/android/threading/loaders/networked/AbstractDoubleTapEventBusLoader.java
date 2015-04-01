@@ -8,7 +8,7 @@ import de.greenrobot.event.EventBus;
 /**
  * Created by kgalligan on 7/29/14.
  */
-public abstract class AbstractDoubleTapEventBusLoader<D, E> extends AbstractDoubleTapLoader<D, E>
+public abstract class AbstractDoubleTapEventBusLoader <D, E> extends AbstractDoubleTapLoader<D, E>
 {
     private EventBus eventBus;
 

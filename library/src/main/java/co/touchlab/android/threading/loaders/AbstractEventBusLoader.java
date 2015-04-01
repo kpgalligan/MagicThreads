@@ -11,7 +11,7 @@ import de.greenrobot.event.EventBus;
  * <p/>
  * Created by kgalligan on 7/5/14.
  */
-public abstract class AbstractEventBusLoader<D> extends AbstractDataLoader<D>
+public abstract class AbstractEventBusLoader <D> extends AbstractDataLoader<D>
 {
     private EventBus eventBus;
 

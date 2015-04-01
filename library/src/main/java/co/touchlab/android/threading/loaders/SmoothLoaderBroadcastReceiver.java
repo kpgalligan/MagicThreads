@@ -9,7 +9,7 @@ import android.os.Handler;
  */
 public class SmoothLoaderBroadcastReceiver extends LoaderBroadcastReceiver
 {
-    private final Handler handler;
+    private final Handler                handler;
     private final ContentChangedRunnable contentChangedRunnable;
 
     public SmoothLoaderBroadcastReceiver(AbstractLocalBroadcastReceiverLoader loader)

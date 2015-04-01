@@ -4,10 +4,10 @@ import android.app.Application;
 import android.content.Context;
 import android.os.Message;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 
 import co.touchlab.android.threading.utils.UiThreadContext;
 
@@ -18,8 +18,8 @@ import co.touchlab.android.threading.utils.UiThreadContext;
  */
 public class TaskQueue extends BaseTaskQueue
 {
-    private static Map<String, TaskQueue> queueMap = new HashMap<String, TaskQueue>();
-    private static final String DEFAULT_QUEUE = "__DEFAULT";
+    private static       Map<String, TaskQueue> queueMap      = new HashMap<String, TaskQueue>();
+    private static final String                 DEFAULT_QUEUE = "__DEFAULT";
 
     /**
      * Get a direct reference to your queue.  Call on main thread.
@@ -29,11 +29,25 @@ public class TaskQueue extends BaseTaskQueue
      */
     public static synchronized TaskQueue loadQueue(Context context, String name)
     {
+        return loadQueue(context, name, true);
+    }
+
+    public static synchronized TaskQueue loadQueue(Context context, String name, boolean fifo)
+    {
         TaskQueue taskQueueActual = queueMap.get(name);
-        if (taskQueueActual == null)
+
+        if(taskQueueActual == null)
         {
-            taskQueueActual = new TaskQueue((Application) context.getApplicationContext());
+            taskQueueActual = new TaskQueue((Application) context.getApplicationContext(), fifo);
             queueMap.put(name, taskQueueActual);
+        }
+        else
+        {
+            if(taskQueueActual.fifo != fifo)
+            {
+                throw new IllegalStateException(
+                        "Queue already created with different fifo setting: " + name + "/" + fifo);
+            }
         }
 
         return taskQueueActual;
@@ -52,17 +66,54 @@ public class TaskQueue extends BaseTaskQueue
     //*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     //*~*~*~*~*~*~*~*~*~*~ PER INSTANCE *~*~*~*~*~*~*~*~*~*~*~*~*~
     //*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-
+    private final boolean fifo;
 
     public TaskQueue(Application application)
     {
-        super(application);
+        this(application, true);
     }
 
-    @Override
-    protected Queue<Task> createQueue()
+    public TaskQueue(Application application, boolean fifo)
     {
-        return new LinkedList<Task>();
+        super(application, new LinkedListQueue<Task>(fifo));
+        this.fifo = fifo;
+    }
+
+    static class LinkedListQueue <Task> implements QueueWrapper<Task>
+    {
+        private final LinkedList<Task> linkedList = new LinkedList<Task>();
+        private final boolean fifo;
+
+        public LinkedListQueue(boolean fifo)
+        {
+            this.fifo = fifo;
+        }
+
+        @Override
+        public Task poll()
+        {
+            return fifo
+                    ? linkedList.poll()
+                    : linkedList.pollLast();
+        }
+
+        @Override
+        public void offer(Task task)
+        {
+            linkedList.offer(task);
+        }
+
+        @Override
+        public Collection<Task> all()
+        {
+            return linkedList;
+        }
+
+        @Override
+        public void remove(Task task)
+        {
+            linkedList.remove(task);
+        }
     }
 
     @Override
@@ -76,7 +127,7 @@ public class TaskQueue extends BaseTaskQueue
     {
         try
         {
-            if (task != null)
+            if(task != null)
             {
                 task.onComplete(application);
             }
@@ -94,7 +145,7 @@ public class TaskQueue extends BaseTaskQueue
      */
     public void execute(final Task task)
     {
-        if (UiThreadContext.isInUiThread())
+        if(UiThreadContext.isInUiThread())
         {
             insertTask(task);
         }
@@ -123,10 +174,10 @@ public class TaskQueue extends BaseTaskQueue
             {
                 task.run(application);
             }
-            catch (Throwable e)
+            catch(Throwable e)
             {
                 boolean handled = task.handleError(application, e);
-                if (!handled)
+                if(! handled)
                 {
                     handler.sendMessage(handler.obtainMessage(QueueHandler.THROW, e));
                 }

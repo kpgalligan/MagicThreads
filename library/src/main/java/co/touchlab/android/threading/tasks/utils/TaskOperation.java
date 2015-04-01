@@ -13,7 +13,7 @@ import co.touchlab.android.threading.tasks.TaskQueue;
  */
 public class TaskOperation
 {
-    List<Class> matchClasses = new ArrayList<Class>(2);
+    List<Class>         matchClasses   = new ArrayList<Class>(2);
     List<ViewOperation> viewOperations = new ArrayList<ViewOperation>(10);
 
     public void addClasses(Class... classes)
@@ -28,7 +28,7 @@ public class TaskOperation
 
     public void enabled(View... views)
     {
-        for (View view : views)
+        for(View view : views)
         {
             addOperation(new ViewEnabled(view));
         }
@@ -36,7 +36,7 @@ public class TaskOperation
 
     public void visible(boolean normallyVisible, View... views)
     {
-        for (View view : views)
+        for(View view : views)
         {
             addOperation(new ViewVisible(normallyVisible, view));
         }
@@ -44,7 +44,7 @@ public class TaskOperation
 
     public void visible(boolean normallyVisible, boolean hideGone, View... views)
     {
-        for (View view : views)
+        for(View view : views)
         {
             addOperation(new ViewVisible(normallyVisible, hideGone, view));
         }
@@ -52,8 +52,9 @@ public class TaskOperation
 
     public void perform(TaskQueue queueActual)
     {
-        boolean found = TaskQueueHelper.hasTasksOfType(queueActual, matchClasses.toArray(new Class[matchClasses.size()]));
-        for (ViewOperation viewOperation : viewOperations)
+        boolean found = TaskQueueHelper
+                .hasTasksOfType(queueActual, matchClasses.toArray(new Class[matchClasses.size()]));
+        for(ViewOperation viewOperation : viewOperations)
         {
             viewOperation.perform(found);
         }
@@ -81,7 +82,7 @@ public class TaskOperation
         @Override
         void perform(boolean found)
         {
-            view.setEnabled(!found);
+            view.setEnabled(! found);
         }
     }
 
@@ -105,15 +106,21 @@ public class TaskOperation
         @Override
         void perform(boolean found)
         {
-            int hideState = hideGone ? View.GONE : View.INVISIBLE;
+            int hideState = hideGone
+                    ? View.GONE
+                    : View.INVISIBLE;
             int vis;
-            if (normallyShown)
+            if(normallyShown)
             {
-                vis = found ? hideState : View.VISIBLE;
+                vis = found
+                        ? hideState
+                        : View.VISIBLE;
             }
             else
             {
-                vis = found ? View.VISIBLE : hideState;
+                vis = found
+                        ? View.VISIBLE
+                        : hideState;
             }
 
             view.setVisibility(vis);

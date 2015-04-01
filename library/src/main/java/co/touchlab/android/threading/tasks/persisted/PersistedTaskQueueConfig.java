@@ -21,8 +21,8 @@ public class PersistedTaskQueueConfig
 {
     public static final String PERSISTED_QUEUE = "PERSISTED_QUEUE";
     List<SuperbusEventListener> eventListeners = new ArrayList<SuperbusEventListener>();
-    BusLog log;
-    CommandPurgePolicy commandPurgePolicy;
+    BusLog              log;
+    CommandPurgePolicy  commandPurgePolicy;
     PersistenceProvider persistenceProvider;
 
     public static class Builder
@@ -31,8 +31,10 @@ public class PersistedTaskQueueConfig
 
         private void checkState() throws ConfigException
         {
-            if (config == null)
+            if(config == null)
+            {
                 throw new ConfigException("build already called");
+            }
         }
 
         public Builder addEventListener(SuperbusEventListener eventListener) throws ConfigException
@@ -65,15 +67,20 @@ public class PersistedTaskQueueConfig
 
         public PersistedTaskQueueConfig build(Context context) throws ConfigException
         {
-            if (config.log == null)
+            if(config.log == null)
+            {
                 config.log = new BusLogImpl();
-            if (config.commandPurgePolicy == null)
+            }
+            if(config.commandPurgePolicy == null)
+            {
                 config.commandPurgePolicy = new TransientMethuselahCommandPurgePolicy();
+            }
 
-            if (config.persistenceProvider == null)
+            if(config.persistenceProvider == null)
+            {
                 config.persistenceProvider = new CommandPersistenceProvider(
-                        new LocalDatabaseFactory(context)
-                );
+                        new LocalDatabaseFactory(context));
+            }
 
             PersistedTaskQueueConfig retConfig = config;
             config = null;
@@ -107,7 +114,9 @@ public class PersistedTaskQueueConfig
 
         private LocalDatabaseFactory(Context context)
         {
-            sqLiteDatabase = new ClearSQLiteDatabase(SimpleDatabaseHelper.getInstance(context, PERSISTED_QUEUE).getWritableDatabase());
+            sqLiteDatabase = new ClearSQLiteDatabase(
+                    SimpleDatabaseHelper.getInstance(context, PERSISTED_QUEUE)
+                                        .getWritableDatabase());
         }
 
         @Override

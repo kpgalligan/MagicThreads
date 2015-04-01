@@ -23,12 +23,18 @@ public class EventBusExt
                 @Override
                 public void run()
                 {
-                    if (throwable instanceof RuntimeException)
+                    if(throwable instanceof RuntimeException)
+                    {
                         throw (RuntimeException) throwable;
-                    else if (throwable instanceof Error)
+                    }
+                    else if(throwable instanceof Error)
+                    {
                         throw (Error) throwable;
+                    }
                     else
+                    {
                         throw new RuntimeException(throwable);
+                    }
                 }
             }.start();
         }

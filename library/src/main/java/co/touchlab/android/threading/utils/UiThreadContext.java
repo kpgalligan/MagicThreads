@@ -15,8 +15,10 @@ public class UiThreadContext
      */
     public static void assertUiThread()
     {
-        if (!isInUiThread())
+        if(! isInUiThread())
+        {
             throw new RuntimeException("This call must be in UI thread");
+        }
     }
 
     public static boolean isInUiThread()
@@ -32,7 +34,9 @@ public class UiThreadContext
      */
     public static void assertBackgroundThread()
     {
-        if (isInUiThread())
+        if(isInUiThread())
+        {
             throw new RuntimeException("This call must be in background thread");
+        }
     }
 }
