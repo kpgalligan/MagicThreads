@@ -1,6 +1,7 @@
 package co.touchlab.android.threading.tasks.persisted;
 
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,6 +66,14 @@ public class PersistedTaskQueueConfig
             return this;
         }
 
+        public Builder setDatabase(SQLiteDatabase database)throws ConfigException
+        {
+            checkState();
+            config.persistenceProvider = new CommandPersistenceProvider(new LocalDatabaseFactory(database));
+            return this;
+        }
+
+
         public PersistedTaskQueueConfig build(Context context) throws ConfigException
         {
             if(config.log == null)
@@ -79,7 +88,8 @@ public class PersistedTaskQueueConfig
             if(config.persistenceProvider == null)
             {
                 config.persistenceProvider = new CommandPersistenceProvider(
-                        new LocalDatabaseFactory(context));
+                        new LocalDatabaseFactory(SimpleDatabaseHelper.getInstance(context, PERSISTED_QUEUE)
+                                                                     .getWritableDatabase()));
             }
 
             PersistedTaskQueueConfig retConfig = config;
@@ -112,11 +122,9 @@ public class PersistedTaskQueueConfig
     {
         private ClearSQLiteDatabase sqLiteDatabase;
 
-        private LocalDatabaseFactory(Context context)
+        private LocalDatabaseFactory(SQLiteDatabase database)
         {
-            sqLiteDatabase = new ClearSQLiteDatabase(
-                    SimpleDatabaseHelper.getInstance(context, PERSISTED_QUEUE)
-                                        .getWritableDatabase());
+            sqLiteDatabase = new ClearSQLiteDatabase(database);
         }
 
         @Override

@@ -18,7 +18,7 @@ public class DefaultPersistedTaskQueue
     {
         if(INSTANCE == null)
         {
-            PersistedTaskQueueConfig build = null;
+            PersistedTaskQueueConfig build;
             try
             {
                 build = new PersistedTaskQueueConfig.Builder().build(context);
