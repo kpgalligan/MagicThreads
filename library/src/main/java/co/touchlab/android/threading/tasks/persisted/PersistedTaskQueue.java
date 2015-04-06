@@ -85,6 +85,8 @@ public class PersistedTaskQueue extends BaseTaskQueue
                 case Transient:
                     logTransientException(container.c, container.cause);
                     tasks.offer(container.c);
+
+                    //TODO: Listeners won't be called when we dump out from transient
                     shouldReset = false;
                     callQueueFinished();
                     break;
@@ -113,6 +115,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
      */
     public void execute(final PersistedTask task)
     {
+        task.setMyQueue(this);
         if(UiThreadContext.isInUiThread())
         {
             callExecute(task);
@@ -268,55 +271,73 @@ public class PersistedTaskQueue extends BaseTaskQueue
         {
             UiThreadContext.assertBackgroundThread();
 
-            CommandResult commandResult;
-            Throwable cause;
-
-            try
+            Runnable taskRun = new Runnable()
             {
-                callCommand(c);
-                cause = null;
-                commandResult = CommandResult.Success;
-            }
-            catch(SoftException e)
-            {
-                cause = e;
-
-                boolean purge = commandPurgePolicy.purgeCommandOnTransientException(c, e);
-
-                if(purge)
+                @Override
+                public void run()
                 {
-                    log.w(TAG, "Purging command on TransientException: {" + c.logSummary() + "}");
-                    commandResult = CommandResult.Permanent;
-                }
-                else
-                {
-                    commandResult = CommandResult.Transient;
-                }
-            }
-            catch(Throwable e)
-            {
-                cause = e;
-                commandResult = CommandResult.Permanent;
-            }
+                    CommandResult commandResult;
+                    Throwable cause;
 
-            if(cause != null)
-            {
-                log.e(TAG, null, cause);
-            }
+                    try
+                    {
+                        callCommand(c);
+                        cause = null;
+                        commandResult = CommandResult.Success;
+                    }
+                    catch(SoftException e)
+                    {
+                        cause = e;
 
-            if(commandResult == CommandResult.Success || commandResult == CommandResult.Permanent)
+                        boolean purge = commandPurgePolicy.purgeCommandOnTransientException(c, e);
+
+                        if(purge)
+                        {
+                            log.w(TAG, "Purging command on TransientException: {" + c
+                                    .logSummary() + "}");
+                            commandResult = CommandResult.Permanent;
+                        }
+                        else
+                        {
+                            commandResult = CommandResult.Transient;
+                        }
+                    }
+                    catch(Throwable e)
+                    {
+                        cause = e;
+                        commandResult = CommandResult.Permanent;
+                    }
+
+                    if(cause != null)
+                    {
+                        log.e(TAG, null, cause);
+                    }
+
+                    if(commandResult == CommandResult.Success || commandResult == CommandResult.Permanent)
+                    {
+                        provider.removeCommand(c);
+                    }
+                    else
+                    {
+                        c.setTransientExceptionCount(c.getTransientExceptionCount() + 1);
+                        provider.saveCommand(c);
+                    }
+
+                    handler.sendMessage(handler.obtainMessage(QueueHandler.POST_EXE,
+                                                              new FinishTaskContainer(c,
+                                                                                      commandResult,
+                                                                                      cause)));
+                }
+            };
+
+            if(c.runAllInTransaction())
             {
-                provider.removeCommand(c);
+                provider.runInTransaction(taskRun);
             }
             else
             {
-                c.setTransientExceptionCount(c.getTransientExceptionCount() + 1);
-                provider.saveCommand(c);
+                taskRun.run();
             }
-
-            handler.sendMessage(handler.obtainMessage(QueueHandler.POST_EXE,
-                                                      new FinishTaskContainer(c, commandResult,
-                                                                              cause)));
         }
     }
 

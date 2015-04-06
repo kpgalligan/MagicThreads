@@ -145,6 +145,7 @@ public class TaskQueue extends BaseTaskQueue
      */
     public void execute(final Task task)
     {
+        task.setMyQueue(this);
         if(UiThreadContext.isInUiThread())
         {
             insertTask(task);

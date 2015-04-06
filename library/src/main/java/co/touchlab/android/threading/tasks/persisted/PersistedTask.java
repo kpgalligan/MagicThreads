@@ -262,4 +262,15 @@ public abstract class PersistedTask extends Task implements Comparable<Persisted
     {
         this.id = id;
     }
+
+    /**
+     * Override to true if task is short, and it should all be in the parent db transaction.
+     * If doing network stuff, definitely don't do this.
+     *
+     * @return
+     */
+    protected boolean runAllInTransaction()
+    {
+        return false;
+    }
 }

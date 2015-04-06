@@ -56,6 +56,11 @@ public abstract class BaseTaskQueue
         void remove(T task);
     }
 
+    public int countTasks()
+    {
+        return tasks.all().size() + (currentTask == null ? 0 : 1);
+    }
+
     public void addListener(QueueListener listener)
     {
         listeners.add(listener);
@@ -121,19 +126,18 @@ public abstract class BaseTaskQueue
                             startedCalled = true;
                             for(QueueListener listener : listeners)
                             {
-                                listener.queueStarted();
+                                listener.queueStarted(BaseTaskQueue.this);
                             }
                         }
                         for(QueueListener listener : listeners)
                         {
-                            listener.taskStarted(task);
+                            listener.taskStarted(BaseTaskQueue.this, task);
                         }
                         runTask(task);
                     }
                     else
                     {
                         callQueueFinished();
-                        startedCalled = false;
                     }
                     break;
                 case POST_EXE:
@@ -142,7 +146,7 @@ public abstract class BaseTaskQueue
                     finishTask(msg, tempTask);
                     for(QueueListener listener : listeners)
                     {
-                        listener.taskFinished(tempTask);
+                        listener.taskFinished(BaseTaskQueue.this, tempTask);
                     }
                     break;
                 case THROW:
@@ -169,8 +173,9 @@ public abstract class BaseTaskQueue
     {
         for(QueueListener listener : listeners)
         {
-            listener.queueFinished();
+            listener.queueFinished(this);
         }
+        startedCalled = false;
     }
 
     public TaskQueueState copyState()
@@ -224,13 +229,13 @@ public abstract class BaseTaskQueue
 
     public interface QueueListener
     {
-        void queueStarted();
+        void queueStarted(BaseTaskQueue queue);
 
-        void queueFinished();
+        void queueFinished(BaseTaskQueue queue);
 
-        void taskStarted(Task task);
+        void taskStarted(BaseTaskQueue queue, Task task);
 
-        void taskFinished(Task task);
+        void taskFinished(BaseTaskQueue queue, Task task);
     }
 
     /**

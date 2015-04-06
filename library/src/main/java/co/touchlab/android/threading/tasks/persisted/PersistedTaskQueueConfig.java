@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase;
 import java.util.ArrayList;
 import java.util.List;
 
+import co.touchlab.android.threading.tasks.BaseTaskQueue;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.ClearSQLiteDatabase;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseFactory;
 import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SQLiteDatabaseIntf;
@@ -20,8 +21,8 @@ import co.touchlab.android.threading.tasks.persisted.storage.sqlite.SimpleDataba
  */
 public class PersistedTaskQueueConfig
 {
-    public static final String PERSISTED_QUEUE = "PERSISTED_QUEUE";
-    List<SuperbusEventListener> eventListeners = new ArrayList<SuperbusEventListener>();
+    public static final String                            PERSISTED_QUEUE = "PERSISTED_QUEUE";
+    private             List<BaseTaskQueue.QueueListener> eventListeners  = new ArrayList<BaseTaskQueue.QueueListener>();
     BusLog              log;
     CommandPurgePolicy  commandPurgePolicy;
     PersistenceProvider persistenceProvider;
@@ -38,7 +39,7 @@ public class PersistedTaskQueueConfig
             }
         }
 
-        public Builder addEventListener(SuperbusEventListener eventListener) throws ConfigException
+        public Builder addQueueListener(BaseTaskQueue.QueueListener eventListener) throws ConfigException
         {
             checkState();
             config.eventListeners.add(eventListener);
@@ -96,11 +97,6 @@ public class PersistedTaskQueueConfig
             config = null;
             return retConfig;
         }
-    }
-
-    public List<SuperbusEventListener> getEventListeners()
-    {
-        return eventListeners;
     }
 
     public BusLog getLog()

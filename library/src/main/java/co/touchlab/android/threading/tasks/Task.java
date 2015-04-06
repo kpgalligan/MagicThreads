@@ -7,6 +7,13 @@ import android.content.Context;
  */
 public abstract class Task
 {
+    protected transient BaseTaskQueue myQueue;
+
+    public void setMyQueue(BaseTaskQueue myQueue)
+    {
+        this.myQueue = myQueue;
+    }
+
     protected abstract void run(Context context) throws Throwable;
 
     /**
