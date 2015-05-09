@@ -18,7 +18,7 @@ public class ConnectionChangeBusEventListener implements BaseTaskQueue.QueueList
 
     public ConnectionChangeBusEventListener(Context app, Class receiverClass)
     {
-        this.app = app;
+        this.app = app.getApplicationContext();
         this.receiverClass = receiverClass;
     }
 

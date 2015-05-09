@@ -6,7 +6,8 @@ import co.touchlab.android.threading.tasks.BaseTaskQueue;
 import co.touchlab.android.threading.tasks.Task;
 
 /**
- * Run tasks with a service started.  Service does nothing but attempt to keep the process alive.
+ * Run tasks with a service started.  Service does nothing.  However, since its running, your app is
+ * more likely to stick around.
  *
  * Created by kgalligan on 4/4/15.
  */

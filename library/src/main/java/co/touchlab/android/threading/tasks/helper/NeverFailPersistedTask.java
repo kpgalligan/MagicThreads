@@ -24,7 +24,10 @@ public abstract class NeverFailPersistedTask extends PersistedTask
         }
         catch(Exception e)
         {
-            reportError(e);
+            if(e instanceof SoftException)
+                throw e;
+            else
+                reportError(e);
         }
     }
 
@@ -33,10 +36,11 @@ public abstract class NeverFailPersistedTask extends PersistedTask
      *
      * @param context
      */
-    protected abstract void runTask(Context context);
+    protected abstract void runTask(Context context)throws Exception;
 
     /**
-     * When an error is found, this method reports it.  You *must* send errors somewhere, and fix/redeploy the app.  If you don't, your app will forever wedge.
+     * When an error is found, this method reports it.  You *must* send errors somewhere, and fix/redeploy the app.
+     * If you don't, your app will forever wedge.
      * If you don't report your error here, your app will be a mess.  You have been warned.
      *
      * @param e

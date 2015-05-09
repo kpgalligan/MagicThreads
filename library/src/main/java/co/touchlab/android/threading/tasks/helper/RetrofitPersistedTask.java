@@ -7,6 +7,8 @@ import co.touchlab.android.threading.tasks.persisted.PersistedTask;
 import retrofit.RetrofitError;
 
 /**
+ * Helper class for using Retrofit and PersistedTask.
+ *
  * Created by kgalligan on 4/4/15.
  */
 public abstract class RetrofitPersistedTask extends PersistedTask

@@ -6,6 +6,9 @@ import co.touchlab.android.threading.tasks.BaseTaskQueue;
 import co.touchlab.android.threading.tasks.Task;
 
 /**
+ * Runs the queue in a wake lock.  If you don't understand why this might be dangerous, don't
+ * use it.
+ *
  * Created by kgalligan on 4/4/15.
  */
 public class WakeLockQueueListener implements BaseTaskQueue.QueueListener
