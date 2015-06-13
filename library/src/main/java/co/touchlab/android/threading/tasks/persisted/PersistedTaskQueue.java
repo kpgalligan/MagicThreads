@@ -457,7 +457,7 @@ public class PersistedTaskQueue extends BaseTaskQueue
 
     private void runInBackground(final Runnable r)
     {
-        executorService.execute(new Runnable()
+        executeHandler.post(new Runnable()
         {
             @Override
             public void run()

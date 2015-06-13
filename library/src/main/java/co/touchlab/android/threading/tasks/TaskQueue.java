@@ -119,7 +119,7 @@ public class TaskQueue extends BaseTaskQueue
     @Override
     protected void runTask(Task task)
     {
-        executorService.execute(new ExeTask(task));
+        executeHandler.post(new ExeTask(task));
     }
 
     @Override
