@@ -36,7 +36,8 @@ public class WakeLockQueueListener implements BaseTaskQueue.QueueListener
     @Override
     public void queueFinished(BaseTaskQueue queue)
     {
-        wakeLock.release();
+        if(wakeLock != null)
+            wakeLock.release();
         wakeLock = null;
     }
 

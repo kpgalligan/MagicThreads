@@ -39,6 +39,10 @@ public class PersistedTaskQueue extends BaseTaskQueue
         provider = config.getPersistenceProvider();
         commandPurgePolicy = config.commandPurgePolicy;
         log = config.getLog();
+        for(QueueListener queueListener : config.getEventListeners())
+        {
+            addListener(queueListener);
+        }
         runInBackground(new LoadAllRunnable());
     }
 

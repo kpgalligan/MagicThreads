@@ -114,6 +114,11 @@ public class PersistedTaskQueueConfig
         return persistenceProvider;
     }
 
+    public List<BaseTaskQueue.QueueListener> getEventListeners()
+    {
+        return eventListeners;
+    }
+
     private static final class LocalDatabaseFactory implements SQLiteDatabaseFactory
     {
         private ClearSQLiteDatabase sqLiteDatabase;
