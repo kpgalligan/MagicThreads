@@ -20,6 +20,7 @@ public class TaskQueue extends BaseTaskQueue
 {
     private static       Map<String, TaskQueue> queueMap      = new HashMap<String, TaskQueue>();
     private static final String                 DEFAULT_QUEUE = "__DEFAULT";
+    private static final String                 NETWORK_QUEUE = "__NETWORK";
 
     /**
      * Get a direct reference to your queue.  Call on main thread.
@@ -61,6 +62,16 @@ public class TaskQueue extends BaseTaskQueue
     public static TaskQueue loadQueueDefault(Context context)
     {
         return loadQueue(context, DEFAULT_QUEUE);
+    }
+
+    /**
+     * The default queue
+     *
+     * @return
+     */
+    public static TaskQueue loadQueueNetwork(Context context)
+    {
+        return loadQueue(context, NETWORK_QUEUE);
     }
 
     //*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~

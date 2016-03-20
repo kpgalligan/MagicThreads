@@ -11,6 +11,9 @@ public abstract class StickyTask extends Task
 
     protected StickyTask(StickyTaskManager taskManager)
     {
-        affinityId = taskManager.affinityId;
+        if(taskManager != null)
+            affinityId = taskManager.affinityId;
+        else
+            affinityId = -1;
     }
 }

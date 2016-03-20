@@ -24,7 +24,7 @@ public class StickyTaskManager
         }
         else
         {
-            affinityId = inState.getInt(CONTEXT_ID);
+            affinityId = inState.getLong(CONTEXT_ID);
         }
     }
 
