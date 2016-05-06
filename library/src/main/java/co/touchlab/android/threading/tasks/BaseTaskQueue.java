@@ -2,7 +2,6 @@ package co.touchlab.android.threading.tasks;
 
 import android.app.Application;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 
@@ -10,6 +9,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 import co.touchlab.android.threading.utils.UiThreadContext;
 
@@ -23,7 +25,16 @@ public abstract class BaseTaskQueue
     protected final QueueWrapper<Task> tasks;
     private         Task               currentTask;
 
-    protected final Handler executeHandler;
+    protected final ExecutorService executorService = Executors
+            .newSingleThreadExecutor(new ThreadFactory()
+            {
+                @Override
+                public Thread newThread(Runnable r)
+                {
+                    return new Thread(r);
+                }
+            });
+
     private List<QueueListener> listeners     = new ArrayList<QueueListener>();
     private boolean             startedCalled = false;
 
@@ -32,9 +43,6 @@ public abstract class BaseTaskQueue
         this.application = application;
         tasks = queueWrapper;
         handler = new QueueHandler(Looper.getMainLooper());
-        HandlerThread ht = new HandlerThread("Background");
-        ht.start();
-        executeHandler = new Handler(ht.getLooper());
     }
 
     protected interface QueueWrapper <T>
@@ -50,9 +58,7 @@ public abstract class BaseTaskQueue
 
     public int countTasks()
     {
-        return tasks.all().size() + (currentTask == null
-                ? 0
-                : 1);
+        return tasks.all().size() + (currentTask == null ? 0 : 1);
     }
 
     public void addListener(QueueListener listener)
