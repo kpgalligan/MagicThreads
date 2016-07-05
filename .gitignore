@@ -7,3 +7,5 @@ example/gen
 *.iml
 library/build.sh
 atlassian-ide-plugin.xml
+build/
+.gradle

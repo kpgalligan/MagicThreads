@@ -1,0 +1,67 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+//        maven { url 'http://oss.jfrog.org/artifactory/oss-snapshot-local' }
+//        maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+//        maven { url "https://plugins.gradle.org/m2/" }
+        maven {
+            url dopplMavenDeploy
+        }
+    }
+}
+
+allprojects {
+    repositories {
+        jcenter()
+        mavenCentral()
+//        maven { url "https://raw.github.com/Raizlabs/maven-releases/master/releases" }
+//        maven { url 'http://oss.jfrog.org/artifactory/oss-snapshot-local' }
+        maven {
+            url dopplMavenDeploy
+        }
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+configurations {
+    provided
+}
+sourceSets {
+    main { compileClasspath += configurations.provided }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'junit:junit:4.11'
+    provided 'com.google.android:android:4.1.1.4'
+    compile 'de.greenrobot:eventbus:2.4.0'
+    compile 'com.google.code.gson:gson:2.6.2'
+    provided 'com.squareup.retrofit:retrofit:1.9.0'
+}
+
+group = 'co.touchlab'
+version = '0.9.1'
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId 'magicthreads'
+            from components.java
+
+        }
+    }
+    repositories {
+        maven {
+            // change to point to your repo, e.g. http://my.org/repo
+            url dopplMavenDeploy
+        }
+    }
+}
