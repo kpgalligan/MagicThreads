@@ -32,10 +32,12 @@ sourceCompatibility = 1.7
 targetCompatibility = 1.7
 
 configurations {
-    provided
-}
-sourceSets {
-    main { compileClasspath += configurations.provided }
+    provided {
+        dependencies.all { dep ->
+            configurations.default.exclude group: dep.group, module: dep.name
+        }
+    }
+    compile.extendsFrom provided
 }
 
 dependencies {
